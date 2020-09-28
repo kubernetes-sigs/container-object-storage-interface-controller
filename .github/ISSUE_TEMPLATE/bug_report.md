@@ -22,6 +22,7 @@ If the matter is security related, please disclose it privately via https://kube
 
 - Kubernetes version (use `kubectl version`), please list client and server:
 - Controller version (provide the release tag or commit hash):
+- Provisoner name and version (provide the release tag or commit hash):
 - Cloud provider or hardware configuration:
 - OS (e.g: `cat /etc/os-release`):
 - Kernel (e.g. `uname -a`):
