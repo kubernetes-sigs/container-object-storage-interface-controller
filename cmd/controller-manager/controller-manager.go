@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	bucketcontroller "github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
+	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/bucketaccessrequest"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/bucketrequest"
 
 	"github.com/golang/glog"
@@ -59,13 +60,9 @@ func init() {
 }
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		glog.Fatal(err.Error())
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // Just in case
 
-	var cancel context.CancelFunc
-
-	_, cancel = context.WithCancel(cmd.Context())
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -73,6 +70,10 @@ func main() {
 		<-sigs
 		cancel()
 	}()
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		glog.Fatal(err.Error())
+	}
 }
 
 func run(ctx context.Context, args []string) error {
@@ -81,5 +82,6 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	ctrl.AddBucketRequestListener(bucketrequest.NewListener())
+	ctrl.AddBucketAccessRequestListener(bucketaccessrequest.NewListener())
 	return ctrl.Run(ctx)
 }

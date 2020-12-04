@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"golang.org/x/time/rate"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,10 +37,15 @@ import (
 
 var (
 	// Error codes that the central controller will return
-	ErrBucketAlreadyExists = errors.New("A bucket already existing that matches the bucket request")
-	ErrInvalidBucketClass  = errors.New("Cannot find Bucket Class with the name specified in the bucket request")
-	ErrBCUnavailable       = errors.New("BucketClass is not available")
-	ErrNotImplemented      = errors.New("Operation Not Implemented")
+	ErrBucketAlreadyExists       = errors.New("A bucket already existing that matches the bucket request")
+	ErrInvalidBucketClass        = errors.New("Cannot find bucket class with the name specified in the bucket request")
+	ErrBucketAccessAlreadyExists = errors.New("A bucket access already existing that matches the bucket access request")
+	ErrInvalidBucketAccessClass  = errors.New("Cannot find bucket access class with the name specified in the bucket access request")
+	ErrInvalidBucketRequest      = errors.New("Invalid bucket request specified in the bucket access request")
+	ErrWaitForBucketProvisioning = errors.New("Bucket instance specified in the bucket request is not available to provision bucket access")
+	ErrBCUnavailable             = errors.New("BucketClass is not available")
+	ErrNotImplemented            = errors.New("Operation Not Implemented")
+	ErrNilConfigMap              = errors.New("ConfigMap cannot be nil")
 )
 
 func CopySS(m map[string]string) map[string]string {
@@ -63,6 +70,25 @@ func CopyStrings(s []string) []string {
 
 func GetUUID() string {
 	return string(uuid.NewUUID())
+}
+
+func ReadConfigData(kubeClient kubeclientset.Interface, configMapRef *v1.ObjectReference) (string, error) {
+	if configMapRef == nil {
+		return "", ErrNilConfigMap
+	}
+	configMap, err := kubeClient.CoreV1().ConfigMaps(configMapRef.Namespace).Get(context.TODO(), configMapRef.Name, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	payload := make(map[string]string)
+	for name, data := range configMap.Data {
+		payload[name] = data
+	}
+	cData, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return string(cData), nil
 }
 
 // SetupTest is utility function to create clients and controller
@@ -138,6 +164,7 @@ func GetBuckets(ctx context.Context, client bucketclientset.Interface, numExpect
 // This is used by bucket request unit tests
 func ValidateBucket(bucket types.Bucket, bucketrequest types.BucketRequest, bucketclass types.BucketClass) bool {
 	if strings.HasPrefix(bucket.Name, bucketrequest.Spec.BucketPrefix) &&
+		bucketrequest.Spec.BucketInstanceName == bucket.Name &&
 		bucket.Spec.BucketClassName == bucketrequest.Spec.BucketClassName &&
 		bucket.Spec.BucketRequest.Name == bucketrequest.Name &&
 		bucket.Spec.BucketRequest.Namespace == bucketrequest.Namespace &&
@@ -175,8 +202,9 @@ func GetBucketAccesses(ctx context.Context, client bucketclientset.Interface, nu
 // This is used by bucket access request unit tests
 func ValidateBucketAccess(bucketaccess types.BucketAccess, bucketaccessrequest types.BucketAccessRequest, bucketaccessclass types.BucketAccessClass) bool {
 	if bucketaccess.Spec.BucketInstanceName != "" &&
-		bucketaccess.Spec.BucketAccessRequest == bucketaccessrequest.Name &&
-		bucketaccess.Spec.ServiceAccount == bucketaccessrequest.Spec.ServiceAccountName &&
+		bucketaccessrequest.Spec.BucketAccessName == bucketaccess.Name &&
+		bucketaccess.Spec.BucketAccessRequest.UID == bucketaccessrequest.UID &&
+		bucketaccess.Spec.ServiceAccount.Name == bucketaccessrequest.Spec.ServiceAccountName &&
 		bucketaccess.Spec.PolicyActionsConfigMapData != "" &&
 		bucketaccess.Spec.Provisioner == bucketaccessclass.Provisioner {
 		return true
