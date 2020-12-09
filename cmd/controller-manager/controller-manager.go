@@ -39,7 +39,7 @@ func init() {
 		c.PersistentFlags().
 			StringVarP(ptr, name, short, dfault, desc)
 	}
-	strFlag(cmd, &kubeConfig, "kube-config", "", kubeConfig, "path to kubeconfig file")
+	strFlag(cmd, &kubeConfig, "kubeconfig", "", kubeConfig, "path to kubeconfig file")
 
 	hideFlag := func(name string) {
 		cmd.PersistentFlags().MarkHidden(name)
