@@ -1,0 +1,24 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: objectstorage-controller
+  namespace: objectstorage-system
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: objectstorage-controller
+  template:
+    metadata:
+      labels:
+        app: objectstorage-controller
+    spec:
+      serviceAccountName: objectstorage-controller-sa
+      containers:
+        - name: objectstorage-controller
+          image: quay.io/containerobjectstorage/objectstorage-controller:latest
