@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	bucketcontroller "github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/golang/glog"
 )
@@ -35,36 +37,37 @@ func (b *bucketRequestListener) InitializeBucketClient(bc bucketclientset.Interf
 
 // Add creates a bucket in response to a bucketrequest
 func (b *bucketRequestListener) Add(ctx context.Context, obj *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("add called for bucket %s", obj.Name)
+	glog.V(1).Infof("Add called for BucketRequest %s", obj.Name)
 	bucketRequest := obj
 	err := b.provisionBucketRequestOperation(ctx, bucketRequest)
 	if err != nil {
 		// Provisioning is 100% finished / not in progress.
 		switch err {
 		case util.ErrInvalidBucketClass:
-			glog.V(5).Infof("Bucket Class specified does not exist. Stop provisioning, removing bucketRequest %s from bucketRequests in progress", bucketRequest.UID)
+			glog.V(1).Infof("BucketClass specified does not exist while processing BucketRequest %v.", bucketRequest.Name)
 			err = nil
 		case util.ErrBucketAlreadyExists:
-			glog.V(5).Infof("Bucket already exist for this bucket request. Stop provisioning, removing bucketRequest %s from bucketRequests in progress", bucketRequest.UID)
+			glog.V(1).Infof("Bucket already exist for this bucket request %v.", bucketRequest.Name)
 			err = nil
 		default:
-			glog.V(2).Infof("Final error received, removing buckerRequest %s from bucketRequests in progress", bucketRequest.UID)
+			glog.V(1).Infof("Error occurred processing BucketRequest %v: %v", bucketRequest.Name, err)
 		}
 		return err
 	}
 
-	glog.V(5).Infof("BucketRequest processing succeeded, removing bucketRequest %s from bucketRequests in progress", bucketRequest.UID)
+	glog.V(1).Infof("BucketRequest %v is successfully processed.", bucketRequest.Name)
 	return nil
 }
 
 // update processes any updates  made to the bucket request
 func (b *bucketRequestListener) Update(ctx context.Context, old, new *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("update called for bucket %v", old)
+	glog.V(1).Infof("Update called for BucketRequest  %v", old.Name)
 	return nil
 }
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketRequestListener) Delete(ctx context.Context, obj *v1alpha1.BucketRequest) error {
+	glog.V(1).Infof("Delete called for BucketRequest  %v", obj.Name)
 	return nil
 }
 
@@ -93,7 +96,7 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 		return util.ErrInvalidBucketClass
 	}
 
-	glog.Infof("creating bucket for bucketrequest %v", bucketRequest.Name)
+	glog.Infof("Creating Bucket for BucketRequest %v", bucketRequest.Name)
 
 	// create bucket
 	bucket = &v1alpha1.Bucket{}
@@ -102,7 +105,7 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket.Spec.RetentionPolicy = bucketClass.RetentionPolicy
 	bucket.Spec.AnonymousAccessMode = bucketClass.AnonymousAccessMode
 	bucket.Spec.BucketClassName = bucketClass.Name
-	bucket.Spec.BucketRequest = &v1alpha1.BucketRequestReference{
+	bucket.Spec.BucketRequest = &v1.ObjectReference{
 		Name:      bucketRequest.Name,
 		Namespace: bucketRequest.Namespace,
 		UID:       bucketRequest.ObjectMeta.UID}
@@ -114,11 +117,22 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 
 	bucket, err = b.bucketClient.ObjectstorageV1alpha1().Buckets().Create(context.Background(), bucket, metav1.CreateOptions{})
 	if err != nil {
-		glog.V(5).Infof("Error occurred when creating bucket %v", err)
+		glog.V(5).Infof("Error occurred when creating Bucket %v", err)
 		return err
 	}
 
-	glog.Infof("Finished creating bucket %v", bucket.Name)
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		bucketRequest.Spec.BucketInstanceName = bucket.Name
+		_, err := b.bucketClient.ObjectstorageV1alpha1().BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	glog.Infof("Finished creating Bucket %v", bucket.Name)
 	return nil
 }
 
@@ -154,11 +168,6 @@ func (b *bucketRequestListener) FindBucket(ctx context.Context, br *v1alpha1.Buc
 
 // cloneTheBucket clones a bucket to a different namespace when a BR is for brownfield.
 func (b *bucketRequestListener) cloneTheBucket(bucketRequest *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("clone called for bucket %s", bucketRequest.Spec.BucketInstanceName)
+	glog.V(1).Infof("Clone called for Bucket %s", bucketRequest.Spec.BucketInstanceName)
 	return util.ErrNotImplemented
-}
-
-// logOperation format and prints logs
-func logOperation(operation, format string, a ...interface{}) string {
-	return fmt.Sprintf(fmt.Sprintf("%s: %s", operation, format), a...)
 }
