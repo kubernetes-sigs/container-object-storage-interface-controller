@@ -15,8 +15,6 @@ resources:
 - sa.yaml
 - rbac.yaml
 - deployment.yaml
-# Sidecar
-- https://raw.githubusercontent.com/container-object-storage-interface/cosi-provisioner-sidecar/master/examples/object-storage-sidecar.yaml
 
 patches:
 # CRDs
@@ -28,26 +26,3 @@ patches:
       value:
         controller-gen.kubebuilder.io/version: (devel)
         api-approved.kubernetes.io: https://github.com/kubernetes-sigs/container-object-storage-interface-api/pull/2
-# Sidecar
-- target:
-    kind: Deployment
-    name: object-storage-provisioner
-  patch: |-
-    - op: replace
-      path: /metadata
-      value:
-        name: object-storage-provisioner
-        labels:
-          app: object-storage-provisioner
-        namespace: objectstorage-provisioner-ns
-- target:
-    kind: Secret
-    name: object-storage-provisioner
-  patch: |-
-    - op: replace
-      path: /metadata
-      value:
-        name: object-storage-provisioner
-        labels:
-          app: object-storage-provisioner
-        namespace: objectstorage-provisioner-ns
