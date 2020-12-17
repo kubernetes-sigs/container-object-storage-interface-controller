@@ -25,10 +25,10 @@ resources:
 - https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketrequests.yaml
 - https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_buckets.yaml
 # Controller
-- deploy/base/ns.yaml
-- deploy/base/sa.yaml
-- deploy/base/rbac.yaml
-- deploy/base/deployment.yaml
+- ns.yaml
+- sa.yaml
+- rbac.yaml
+- deployment.yaml
 # Sidecar
 - https://raw.githubusercontent.com/container-object-storage-interface/cosi-provisioner-sidecar/master/examples/object-storage-sidecar.yaml
 
