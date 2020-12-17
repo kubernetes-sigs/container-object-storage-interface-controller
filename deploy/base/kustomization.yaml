@@ -28,25 +28,11 @@ patches:
       value:
         controller-gen.kubebuilder.io/version: (devel)
         api-approved.kubernetes.io: https://github.com/kubernetes-sigs/container-object-storage-interface-api/pull/2
-# Controller
-- target:
-    kind: Deployment
-    name: objectstorage-controller
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/imagePullPolicy
-      value: IfNotPresent
 # Sidecar
 - target:
     kind: Deployment
     name: object-storage-provisioner
   patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/imagePullPolicy
-      value: IfNotPresent
-    - op: replace
-      path: /spec/template/spec/containers/1/imagePullPolicy
-      value: IfNotPresent
     - op: replace
       path: /metadata
       value:
