@@ -2,20 +2,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-images:
-# Controller
-- name: objectstorage-controller
-  newName: quay.io/containerobjectstorage/objectstorage-controller
-  newTag: latest
-# Sidecar
-- name: object-storage-sidecar
-  newName: quay.io/containerobjectstorage/object-storage-sidecar
-  newTag: latest
-# Sample Driver
-- name: sample-driver
-  newName: quay.io/containerobjectstorage/sample-driver
-  newTag: latest
-
 resources:
 # CRDs
 - https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketaccessclasses.yaml
