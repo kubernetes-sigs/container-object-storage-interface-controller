@@ -1,0 +1,27 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+# CRDs
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketaccessclasses.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketaccesses.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketaccessrequests.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketclasses.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_bucketrequests.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/container-object-storage-interface-api/master/crds/objectstorage.k8s.io_buckets.yaml
+# Controller
+- sa.yaml
+- rbac.yaml
+- deployment.yaml
+
+patches:
+# CRDs
+- target:
+    kind: CustomResourceDefinition
+  patch: |-
+    - op: add
+      path: /metadata/annotations
+      value:
+        controller-gen.kubebuilder.io/version: (devel)
+        api-approved.kubernetes.io: https://github.com/kubernetes-sigs/container-object-storage-interface-api/pull/2

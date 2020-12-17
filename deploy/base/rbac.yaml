@@ -3,6 +3,11 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller-role
+  labels:
+    app.kubernetes.io/part-of: container-object-storage-interface
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/version: main
+    app.kubernetes.io/name: container-object-storage-interface-controller
 rules:
 - apiGroups: ["objectstorage.k8s.io"]
   resources: ["bucketrequests", "bucketaccessrequests"]
@@ -21,10 +26,14 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: system:objectstorage-controller
+  labels:
+    app.kubernetes.io/part-of: container-object-storage-interface
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/version: main
+    app.kubernetes.io/name: container-object-storage-interface-controller
 subjects:
   - kind: ServiceAccount
     name: objectstorage-controller-sa
-    namespace: objectstorage-system
 roleRef:
   kind: ClusterRole
   name: objectstorage-controller-role
@@ -34,7 +43,11 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller
-  namespace: objectstorage-system
+  labels:
+    app.kubernetes.io/part-of: container-object-storage-interface
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/version: main
+    app.kubernetes.io/name: container-object-storage-interface-controller
 rules:
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
@@ -44,11 +57,14 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller
-  namespace: objectstorage-system
+  labels:
+    app.kubernetes.io/part-of: container-object-storage-interface
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/version: main
+    app.kubernetes.io/name: container-object-storage-interface-controller
 subjects:
   - kind: ServiceAccount
     name: objectstorage-controller-sa
-    namespace: objectstorage-system
 roleRef:
   kind: Role
   name: objectstorage-controller
