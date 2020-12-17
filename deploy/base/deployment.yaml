@@ -3,7 +3,6 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: objectstorage-controller
-  namespace: objectstorage-system
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/component: controller
