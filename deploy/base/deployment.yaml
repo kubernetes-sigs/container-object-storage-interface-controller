@@ -4,6 +4,11 @@ apiVersion: apps/v1
 metadata:
   name: objectstorage-controller
   namespace: objectstorage-system
+  labels:
+    app.kubernetes.io/part-of: container-object-storage-interface
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/version: main
+    app.kubernetes.io/name: container-object-storage-interface-controller
 spec:
   replicas: 1
   strategy:
@@ -12,11 +17,16 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: objectstorage-controller
+      app.kubernetes.io/part-of: container-object-storage-interface
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: container-object-storage-interface-controller
   template:
     metadata:
       labels:
-        app: objectstorage-controller
+        app.kubernetes.io/part-of: container-object-storage-interface
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/version: main
+        app.kubernetes.io/name: container-object-storage-interface-controller
     spec:
       serviceAccountName: objectstorage-controller-sa
       containers:
