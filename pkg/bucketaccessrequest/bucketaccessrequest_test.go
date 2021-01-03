@@ -120,12 +120,22 @@ func TestAddBAR(t *testing.T) {
 
 // Test add with multipleBRs
 func TestAddWithMultipleBAR(t *testing.T) {
-	runCreateBucketWithMultipleBA(t, "addWithMultipleBR")
+	runCreateBucketWithMultipleBA(t, "addWithMultipleBAR")
 }
 
 // Test add idempotency
 func TestAddBARIdempotency(t *testing.T) {
-	runCreateBucketIdempotency(t, "addWithMultipleBR")
+	runCreateBucketIdempotency(t, "addBARIdempotency")
+}
+
+// Test  delete BAR
+func TestDeleteBAR(t *testing.T) {
+	runDeleteBucketAccessRequest(t, "deleteBAR")
+}
+
+// Test  delete BAR Idempotency
+func TestDeleteBARIdempotency(t *testing.T) {
+	runDeleteBucketAccessRequestIdempotency(t, "deleteBARIdempotency")
 }
 
 func runCreateBucketAccess(t *testing.T, name string) {
@@ -328,6 +338,173 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 	listener.Add(ctx, bucketaccessrequest)
 	bucketAccessList = util.GetBucketAccesses(ctx, client, 1)
 	if len(bucketAccessList.Items) != 1 {
+		t.Fatalf("Expecting a single BucketAccess created but found %v", len(bucketAccessList.Items))
+	}
+}
+
+func runDeleteBucketAccessRequest(t *testing.T, name string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := bucketclientset.NewSimpleClientset()
+	kubeClient := fake.NewSimpleClientset()
+
+	listener := NewListener()
+	listener.InitializeKubeClient(kubeClient)
+	listener.InitializeBucketClient(client)
+
+	_, err := kubeClient.CoreV1().ServiceAccounts(sa1.Namespace).Create(ctx, &sa1, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when creating ServiceAccount: %v", err)
+	}
+	defer kubeClient.CoreV1().ServiceAccounts(sa1.Namespace).Delete(ctx, sa1.Name, metav1.DeleteOptions{})
+
+	_, err = kubeClient.CoreV1().ConfigMaps(cosiConfigMap.Namespace).Create(ctx, &cosiConfigMap, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when creating ConfigMap: %v", err)
+	}
+	defer kubeClient.CoreV1().ConfigMaps(cosiConfigMap.Namespace).Delete(ctx, cosiConfigMap.Name, metav1.DeleteOptions{})
+
+	bucketaccessclass, err := util.CreateBucketAccessClass(ctx, client, &goldAccessClass)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketAccessClass: %v", err)
+	}
+
+	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+	}
+
+	bucketaccessrequest, err := util.CreateBucketAccessRequest(ctx, client, &bucketAccessRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketAccessRequest: %v", err)
+	}
+
+	listener.Add(ctx, bucketaccessrequest)
+
+	bucketAccessList := util.GetBucketAccesses(ctx, client, 1)
+	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketaccessrequest, *bucketaccessclass, bucketAccessList.Items)
+
+	if len(bucketAccessList.Items) != 1 {
+		t.Fatalf("Expecting a single BucketAccess created but found %v", len(bucketAccessList.Items))
+	}
+	bucketaccess := bucketAccessList.Items[0]
+
+	bucketaccessrequest2, err := client.ObjectstorageV1alpha1().BucketAccessRequests(bucketaccessrequest.Namespace).Get(ctx, bucketaccessrequest.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when updating BucketAccessRequest: %v", err)
+	}
+
+	if !util.ValidateBucketAccess(bucketaccess, *bucketaccessrequest, *bucketaccessclass) {
+		t.Fatalf("Failed to compare the resulting BucketAccess with the BucketAccessRequest %v and BucketAccessClass %v", bucketaccessrequest, bucketaccessclass)
+	}
+
+	//peform delete and see if the bucketAccessRequest can be deleted
+	err = client.ObjectstorageV1alpha1().BucketAccessRequests(bucketaccessrequest2.Namespace).Delete(ctx, bucketaccessrequest2.Name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when deleting BucketAccessRequest: %v", err)
+	}
+
+	// force update for the finalizer
+	old := bucketaccessrequest
+	now := metav1.Now()
+	bucketaccessrequest2.ObjectMeta.DeletionTimestamp = &now
+	listener.Update(ctx, old, bucketaccessrequest2)
+
+	// there should not be a corresponding BucketAccess
+	bucketAccessList = util.GetBucketAccesses(ctx, client, 0)
+	if len(bucketAccessList.Items) > 0 {
+		t.Fatalf("Expecting BucketAccess object be deleted but found %v", bucketAccessList.Items)
+	}
+}
+
+func runDeleteBucketAccessRequestIdempotency(t *testing.T, name string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := bucketclientset.NewSimpleClientset()
+	kubeClient := fake.NewSimpleClientset()
+
+	listener := NewListener()
+	listener.InitializeKubeClient(kubeClient)
+	listener.InitializeBucketClient(client)
+
+	_, err := kubeClient.CoreV1().ServiceAccounts(sa1.Namespace).Create(ctx, &sa1, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when creating ServiceAccount: %v", err)
+	}
+	defer kubeClient.CoreV1().ServiceAccounts(sa1.Namespace).Delete(ctx, sa1.Name, metav1.DeleteOptions{})
+
+	_, err = kubeClient.CoreV1().ConfigMaps(cosiConfigMap.Namespace).Create(ctx, &cosiConfigMap, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when creating ConfigMap: %v", err)
+	}
+	defer kubeClient.CoreV1().ConfigMaps(cosiConfigMap.Namespace).Delete(ctx, cosiConfigMap.Name, metav1.DeleteOptions{})
+
+	bucketaccessclass, err := util.CreateBucketAccessClass(ctx, client, &goldAccessClass)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketAccessClass: %v", err)
+	}
+
+	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+	}
+
+	bucketaccessrequest, err := util.CreateBucketAccessRequest(ctx, client, &bucketAccessRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketAccessRequest: %v", err)
+	}
+
+	listener.Add(ctx, bucketaccessrequest)
+
+	bucketAccessList := util.GetBucketAccesses(ctx, client, 1)
+	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketaccessrequest, *bucketaccessclass, bucketAccessList.Items)
+
+	if len(bucketAccessList.Items) != 1 {
+		t.Fatalf("Expecting a single BucketAccess created but found %v", len(bucketAccessList.Items))
+	}
+	bucketaccess := bucketAccessList.Items[0]
+
+	bucketaccessrequest2, err := client.ObjectstorageV1alpha1().BucketAccessRequests(bucketaccessrequest.Namespace).Get(ctx, bucketaccessrequest.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when updating BucketAccessRequest: %v", err)
+	}
+
+	if !util.ValidateBucketAccess(bucketaccess, *bucketaccessrequest, *bucketaccessclass) {
+		t.Fatalf("Failed to compare the resulting BucketAccess with the BucketAccessRequest %v and BucketAccessClass %v", bucketaccessrequest, bucketaccessclass)
+	}
+
+	//peform delete and see if the bucketAccessRequest can be deleted
+	err = client.ObjectstorageV1alpha1().BucketAccessRequests(bucketaccessrequest2.Namespace).Delete(ctx, bucketaccessrequest2.Name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when deleting BucketAccessRequest: %v", err)
+	}
+
+	// force update for the finalizer
+	old := bucketaccessrequest
+	now := metav1.Now()
+	bucketaccessrequest2.ObjectMeta.DeletionTimestamp = &now
+	listener.Update(ctx, old, bucketaccessrequest2)
+
+	//there should not be a corresponding BucketAccess
+	bucketAccessList = util.GetBucketAccesses(ctx, client, 0)
+	if len(bucketAccessList.Items) > 0 {
+		t.Fatalf("Expecting BucketAccess object be deleted but found %v", bucketAccessList.Items)
+	}
+
+	//Create a duplicate update
+	listener.Update(ctx, old, bucketaccessrequest2)
+	//there should not be a corresponding BucketAccess
+	bucketAccessList = util.GetBucketAccesses(ctx, client, 0)
+	if len(bucketAccessList.Items) > 0 {
+		t.Fatalf("Expecting BucketAccess object be deleted but found %v", bucketAccessList.Items)
+	}
+
+	// call the delete directly the second time
+	listener.Delete(ctx, bucketaccessrequest)
+	bucketAccessList = util.GetBucketAccesses(ctx, client, 0)
+	if len(bucketAccessList.Items) != 0 {
 		t.Fatalf("Expecting a single BucketAccess created but found %v", len(bucketAccessList.Items))
 	}
 }

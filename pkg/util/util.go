@@ -47,6 +47,11 @@ var (
 	ErrBCUnavailable              = errors.New("BucketClass is not available")
 	ErrNotImplemented             = errors.New("Operation Not Implemented")
 	ErrNilConfigMap               = errors.New("ConfigMap cannot be nil")
+	ErrBucketDoesNotExist         = errors.New("Cannot find Bucket to perform delete on BucketRequest")
+	ErrBucketAccessDoesNotExist   = errors.New("Cannot find BucketAccess to perform delete on BucketAccessRequest")
+
+	BRDeleteFinalizer  = "bucketrequest.objectstorage.k8s.io/delete-protection"
+	BARDeleteFinalizer = "bucketaccessrequest.objectstorage.k8s.io/delete-protection"
 )
 
 func CopySS(m map[string]string) map[string]string {
@@ -90,6 +95,15 @@ func ReadConfigData(kubeClient kubeclientset.Interface, configMapRef *v1.ObjectR
 		return "", err
 	}
 	return string(cData), nil
+}
+
+func CheckFinalizer(obj metav1.Object, finalizer string) bool {
+	for _, f := range obj.GetFinalizers() {
+		if f == finalizer {
+			return true
+		}
+	}
+	return false
 }
 
 // SetupTest is utility function to create clients and controller
