@@ -3,6 +3,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller-role
+  namespace: default
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/component: controller
@@ -25,7 +26,8 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: system:objectstorage-controller
+  name: objectstorage-controller
+  namespace: default
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/component: controller
@@ -34,6 +36,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: objectstorage-controller-sa
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: objectstorage-controller-role
@@ -43,6 +46,7 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller
+  namespace: default
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/component: controller
@@ -57,6 +61,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: objectstorage-controller
+  namespace: default
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/component: controller
@@ -65,6 +70,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: objectstorage-controller-sa
+    namespace: default
 roleRef:
   kind: Role
   name: objectstorage-controller
