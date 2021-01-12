@@ -40,6 +40,7 @@ var bucketRequest1 = types.BucketRequest{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bucketrequest1",
 		Namespace: "default",
+		UID:       "12345-67890",
 	},
 	Spec: types.BucketRequestSpec{
 		BucketPrefix: "cosi",
@@ -59,6 +60,7 @@ var bucketRequest2 = types.BucketRequest{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bucketrequest2",
 		Namespace: "default",
+		UID:       "abcde-fghijk",
 	},
 	Spec: types.BucketRequestSpec{
 		BucketPrefix: "cosi",
