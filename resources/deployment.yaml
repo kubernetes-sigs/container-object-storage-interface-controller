@@ -18,6 +18,7 @@ spec:
     matchLabels:
       app.kubernetes.io/part-of: container-object-storage-interface
       app.kubernetes.io/component: controller
+      app.kubernetes.io/version: main
       app.kubernetes.io/name: container-object-storage-interface-controller
   template:
     metadata:
