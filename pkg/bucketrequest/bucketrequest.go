@@ -2,18 +2,18 @@ package bucketrequest
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "github.com/kubernetes-sigs/container-object-storage-interface-api/clientset"
 	bucketcontroller "github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/golang/glog"
 )
@@ -80,27 +80,33 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	// Most code here is identical to that found in controller.go of kube's  controller...
 	bucketClassName := b.GetBucketClass(bucketRequest)
 
-	//  A previous doProvisionBucketRequest may just have finished while we were waiting for
-	//  the locks. Check that bucket (with deterministic name) hasn't been provisioned
-	//  yet.
-	bucket := b.FindBucket(ctx, bucketRequest)
-	if bucket != nil {
-		// bucket has been already provisioned, nothing to do.
-		glog.Info("Bucket already exists", bucket.Name)
-		return util.ErrBucketAlreadyExists
-	}
-
 	bucketClass, err := b.bucketClient.ObjectstorageV1alpha1().BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 	if bucketClass == nil {
 		// bucketclass does not exist in order to create a bucket
 		return util.ErrInvalidBucketClass
 	}
 
-	glog.Infof("Creating Bucket for BucketRequest %v", bucketRequest.Name)
+	name := bucketRequest.Spec.BucketPrefix
+	if name != "" {
+		name = name + "-"
+	}
+	name = name + string(bucketRequest.GetUID())
+
+	bucket, err := b.bucketClient.ObjectstorageV1alpha1().Buckets().Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		// anything other than 404
+		if !errors.IsNotFound(err) {
+			glog.Errorf("error fetching bucket: %v", err)
+			return err
+		}
+	} else { // if bucket found
+		return nil
+	}
 
 	// create bucket
 	bucket = &v1alpha1.Bucket{}
-	bucket.Name = fmt.Sprintf("%s%s", bucketRequest.Spec.BucketPrefix, util.GetUUID())
+
+	bucket.Name = name
 	bucket.Spec.Provisioner = bucketClass.Provisioner
 	bucket.Spec.RetentionPolicy = bucketClass.RetentionPolicy
 	bucket.Spec.AnonymousAccessMode = bucketClass.AnonymousAccessMode
