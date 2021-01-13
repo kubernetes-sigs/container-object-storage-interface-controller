@@ -68,6 +68,7 @@ var bucketRequest1 = types.BucketRequest{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bucketrequest1",
 		Namespace: "default",
+		UID:       "br-12345",
 	},
 	Spec: types.BucketRequestSpec{
 		BucketPrefix: "cosi",
@@ -88,6 +89,7 @@ var bucketAccessRequest1 = types.BucketAccessRequest{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bucketaccessrequest1",
 		Namespace: "default",
+		UID:       "bar-12345",
 	},
 	Spec: types.BucketAccessRequestSpec{
 		ServiceAccountName:    "sa1",
@@ -104,6 +106,7 @@ var bucketAccessRequest2 = types.BucketAccessRequest{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "bucketaccessrequest2",
 		Namespace: "default",
+		UID:       "bar-67890",
 	},
 	Spec: types.BucketAccessRequestSpec{
 		ServiceAccountName:    "sa2",

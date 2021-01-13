@@ -32,3 +32,5 @@ spec:
       containers:
         - name: objectstorage-controller
           image: quay.io/containerobjectstorage/objectstorage-controller:latest
+          args:
+          - "--v=5"

@@ -37,7 +37,7 @@ func (b *bucketRequestListener) InitializeBucketClient(bc bucketclientset.Interf
 
 // Add creates a bucket in response to a bucketrequest
 func (b *bucketRequestListener) Add(ctx context.Context, obj *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("Add called for BucketRequest %s", obj.Name)
+	glog.V(3).Infof("Add called for BucketRequest %s", obj.Name)
 	bucketRequest := obj
 	err := b.provisionBucketRequestOperation(ctx, bucketRequest)
 	if err != nil {
@@ -61,13 +61,13 @@ func (b *bucketRequestListener) Add(ctx context.Context, obj *v1alpha1.BucketReq
 
 // update processes any updates  made to the bucket request
 func (b *bucketRequestListener) Update(ctx context.Context, old, new *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("Update called for BucketRequest  %v", old.Name)
+	glog.V(3).Infof("Update called for BucketRequest  %v", old.Name)
 	return nil
 }
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketRequestListener) Delete(ctx context.Context, obj *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("Delete called for BucketRequest  %v", obj.Name)
+	glog.V(3).Infof("Delete called for BucketRequest  %v", obj.Name)
 	return nil
 }
 
@@ -81,8 +81,8 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucketClassName := b.GetBucketClass(bucketRequest)
 
 	bucketClass, err := b.bucketClient.ObjectstorageV1alpha1().BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
-	if bucketClass == nil {
-		// bucketclass does not exist in order to create a bucket
+	if err != nil {
+		glog.Errorf("error getting bucketclass: [%v] %v", bucketClassName, err)
 		return util.ErrInvalidBucketClass
 	}
 
@@ -123,6 +123,9 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 
 	bucket, err = b.bucketClient.ObjectstorageV1alpha1().Buckets().Create(context.Background(), bucket, metav1.CreateOptions{})
 	if err != nil {
+		if errors.IsAlreadyExists(err) {
+			return nil
+		}
 		glog.V(5).Infof("Error occurred when creating Bucket %v", err)
 		return err
 	}
