@@ -71,11 +71,7 @@ var bucketRequest1 = types.BucketRequest{
 		UID:       "br-12345",
 	},
 	Spec: types.BucketRequestSpec{
-		BucketPrefix: "cosi",
-		Protocol: types.RequestedProtocol{
-			Name:    "s3",
-			Version: "",
-		},
+		BucketPrefix:       "cosi",
 		BucketClassName:    "classgold",
 		BucketInstanceName: "cosi1234567890",
 	},

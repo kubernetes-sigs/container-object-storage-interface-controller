@@ -28,7 +28,7 @@ var goldClass = types.BucketClass{
 	},
 	AllowedNamespaces:    []string{"default", "cosins"},
 	Parameters:           classGoldParameters,
-	Protocol:             "s3",
+	Protocol:             types.Protocol{Name: "s3"},
 	IsDefaultBucketClass: false,
 }
 
@@ -43,11 +43,7 @@ var bucketRequest1 = types.BucketRequest{
 		UID:       "12345-67890",
 	},
 	Spec: types.BucketRequestSpec{
-		BucketPrefix: "cosi",
-		Protocol: types.RequestedProtocol{
-			Name:    "s3",
-			Version: "",
-		},
+		BucketPrefix:    "cosi",
 		BucketClassName: "classgold",
 	},
 }
@@ -63,11 +59,7 @@ var bucketRequest2 = types.BucketRequest{
 		UID:       "abcde-fghijk",
 	},
 	Spec: types.BucketRequestSpec{
-		BucketPrefix: "cosi",
-		Protocol: types.RequestedProtocol{
-			Name:    "s3",
-			Version: "",
-		},
+		BucketPrefix:    "cosi",
 		BucketClassName: "classgold",
 	},
 }
