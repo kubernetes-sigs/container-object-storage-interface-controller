@@ -6,7 +6,10 @@ Specifically, this controller monitors the lifecycle of the user-facing CRDs:
 - BucketRequest - Represents a request to provision a Bucket
 - BucketAccessRequest - Represents a request to access a Bucket
 
-and makes the necessary gRPC calls to the associated [provisioner](https://github.com/kubernetes-sigs/container-object-storage-interface-provisioner-sidecar)
+and generates the associated CRDs:
+
+- Bucket - Represents a Bucket or its equivalent in the storage backend
+- BucketAccess - Represents a access token or service account in the storage backend
 
 ## Developer Guide
 
