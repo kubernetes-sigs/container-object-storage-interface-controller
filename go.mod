@@ -9,7 +9,6 @@ require (
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20190328170749-bb2674552d8f // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/kubernetes-sigs/container-object-storage-interface-api v0.0.0-20210120011359-1e91ae41e243
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
@@ -32,5 +31,6 @@ require (
 	k8s.io/client-go v0.19.4
 	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
+	sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210225042325-7c26b4fc1ed9
 	sigs.k8s.io/controller-tools v0.4.1
 )

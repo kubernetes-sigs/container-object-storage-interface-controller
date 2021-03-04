@@ -22,9 +22,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 
-	types "github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
-	bucketclientset "github.com/kubernetes-sigs/container-object-storage-interface-api/clientset"
-	"github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
+	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
+	"sigs.k8s.io/container-object-storage-interface-api/controller"
 
 	"sigs.k8s.io/controller-tools/pkg/crd"
 	crdmarkers "sigs.k8s.io/controller-tools/pkg/crd/markers"
@@ -334,7 +334,7 @@ func RegisterCRDs(ctx context.Context, client apiextensions.CustomResourceDefini
 		return err
 	}
 
-	roots, err := loader.LoadRoots("github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1")
+	roots, err := loader.LoadRoots("sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1")
 	if err != nil {
 		return err
 	}

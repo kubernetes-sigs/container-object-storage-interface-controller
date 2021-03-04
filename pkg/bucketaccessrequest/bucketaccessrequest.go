@@ -9,10 +9,10 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
-	bucketclientset "github.com/kubernetes-sigs/container-object-storage-interface-api/clientset"
-	bucketcontroller "github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
+	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
+	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
 	"github.com/golang/glog"
 )

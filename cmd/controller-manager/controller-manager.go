@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	bucketcontroller "github.com/kubernetes-sigs/container-object-storage-interface-api/controller"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/bucketaccessrequest"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/bucketrequest"
+	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
 	"github.com/golang/glog"
 )

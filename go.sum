@@ -303,8 +303,6 @@ github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
-github.com/kubernetes-sigs/container-object-storage-interface-api v0.0.0-20210120011359-1e91ae41e243 h1:iOEsQYg/QXxzYP10JaLtoQWdlGG3OS/a3sOYsrDXwdE=
-github.com/kubernetes-sigs/container-object-storage-interface-api v0.0.0-20210120011359-1e91ae41e243/go.mod h1:C7tjzC+nLe7H7+3UM/Z6a7F24yxOO8FSK3ZaVZrKDPQ=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
@@ -796,6 +794,8 @@ k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.7/go.mod h1:PHgbrJT7lCHcxMU+mDHEm+nx46H4zuuHZkDP6icnhu0=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.9/go.mod h1:dzAXnQbTRyDlZPJX2SUPEqvnB+j7AJjtlox7PEwigU0=
+sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210225042325-7c26b4fc1ed9 h1:ZjGviVPvDVxOhCF7+dsbAk5GPfUpEnM0DtR5yH7S6ww=
+sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210225042325-7c26b4fc1ed9/go.mod h1:4V9ty4CWneFEQJbr+yQPjkCdUH3EKfjXM4AQXLY4Sa8=
 sigs.k8s.io/controller-runtime v0.6.3 h1:SBbr+inLPEKhvlJtrvDcwIpm+uhDvp63Bl72xYJtoOE=
 sigs.k8s.io/controller-runtime v0.6.3/go.mod h1:WlZNXcM0++oyaQt4B7C2lEE5JYRs8vJUzRP4N4JpdAY=
 sigs.k8s.io/controller-tools v0.4.1 h1:VkuV0MxlRPmRu5iTgBZU4UxUX2LiR99n3sdQGRxZF4w=
