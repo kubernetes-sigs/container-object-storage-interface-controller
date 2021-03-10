@@ -7,11 +7,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	bucketclientset "github.com/kubernetes-sigs/container-object-storage-interface-api/clientset/fake"
 	"k8s.io/client-go/kubernetes/fake"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset/fake"
 
-	types "github.com/kubernetes-sigs/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
+	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 )
 
 var sa1 = v1.ServiceAccount{
