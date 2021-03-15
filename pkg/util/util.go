@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-tools/pkg/loader"
 	"sigs.k8s.io/controller-tools/pkg/markers"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -105,26 +105,26 @@ func SetupTest(ctx context.Context) (bucketclientset.Interface, kubeclientset.In
 		return rest.InClusterConfig()
 	}()
 	if err != nil {
-		glog.Fatalf("Failed to create clients: %v", err)
+		klog.Fatalf("Failed to create clients: %v", err)
 	}
 
 	kubeClient, err := kubeclientset.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("Failed to create Kubernetes client: %v", err)
+		klog.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 	client, err := bucketclientset.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("Failed to create ObjectStorage client: %v", err)
+		klog.Fatalf("Failed to create ObjectStorage client: %v", err)
 	}
 
 	crdClientset, err := apiextensions.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("Failed to create CRD client: %v", err)
+		klog.Fatalf("Failed to create CRD client: %v", err)
 	}
 
 	err = RegisterCRDs(ctx, crdClientset.CustomResourceDefinitions())
 	if err != nil {
-		glog.Fatalf("Failed to register CRDs: %v", err)
+		klog.Fatalf("Failed to register CRDs: %v", err)
 	}
 
 	rateLimit := workqueue.NewMaxOfRateLimiter(
@@ -133,7 +133,7 @@ func SetupTest(ctx context.Context) (bucketclientset.Interface, kubeclientset.In
 	)
 	ctrl, err := controller.NewObjectStorageControllerWithClientset("controller-manager", "leader-lock", 40, rateLimit, kubeClient, client)
 	if err != nil {
-		glog.Fatalf("Failed to create ObjectStorage Controller: %v", err)
+		klog.Fatalf("Failed to create ObjectStorage Controller: %v", err)
 	}
 
 	go ctrl.Run(ctx)
@@ -153,7 +153,7 @@ func GetBuckets(ctx context.Context, client bucketclientset.Interface, numExpect
 		if len(bucketList.Items) >= numExpected {
 			return bucketList
 		} else {
-			glog.Errorf("Failed to fetch the bucket created %v", err)
+			klog.Errorf("Failed to fetch the bucket created %v", err)
 		}
 		numtimes++
 		<-time.After(time.Duration(numtimes) * time.Second)
@@ -239,7 +239,7 @@ func DeleteObjects(ctx context.Context, client bucketclientset.Interface, objs .
 				DeleteObjects(ctx, client, a)
 			}
 		default:
-			glog.Errorf("Unknown Obj of type %v", t)
+			klog.Errorf("Unknown Obj of type %v", t)
 		}
 	}
 }
@@ -318,7 +318,7 @@ func getCRDClient() (apiextensions.CustomResourceDefinitionInterface, error) {
 
 	crdClientset, err := apiextensions.NewForConfig(config)
 	if err != nil {
-		glog.Fatalf("could not initialize crd client: %v", err)
+		klog.Fatalf("could not initialize crd client: %v", err)
 		return nil, err
 	}
 	return crdClientset.CustomResourceDefinitions(), err
@@ -386,7 +386,7 @@ func RegisterCRDs(ctx context.Context, client apiextensions.CustomResourceDefini
 			return &i
 		}())
 		crdRaw := parser.CustomResourceDefinitions[groupKind]
-		glog.Infof("creating CRD: %v", groupKind)
+		klog.Infof("creating CRD: %v", groupKind)
 		if crdRaw.ObjectMeta.Annotations == nil {
 			crdRaw.ObjectMeta.Annotations = map[string]string{}
 		}

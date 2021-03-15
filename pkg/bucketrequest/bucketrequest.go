@@ -2,7 +2,6 @@ package bucketrequest
 
 import (
 	"context"
-	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -13,76 +12,86 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
-	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
+	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/clientset/typed/objectstorage.k8s.io/v1alpha1"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
+// bucketRequestListener is a resource handler for bucket requests objects
 type bucketRequestListener struct {
 	kubeClient   kubeclientset.Interface
 	bucketClient bucketclientset.Interface
 }
 
-func NewListener() bucketcontroller.BucketRequestListener {
+func NewBucketRequestListener() *bucketRequestListener {
 	return &bucketRequestListener{}
 }
 
-func (b *bucketRequestListener) InitializeKubeClient(k kubeclientset.Interface) {
-	b.kubeClient = k
-}
-
-func (b *bucketRequestListener) InitializeBucketClient(bc bucketclientset.Interface) {
-	b.bucketClient = bc
-}
-
 // Add creates a bucket in response to a bucketrequest
-func (b *bucketRequestListener) Add(ctx context.Context, obj *v1alpha1.BucketRequest) error {
-	glog.V(3).Infof("Add called for BucketRequest %s", obj.Name)
-	bucketRequest := obj
+func (b *bucketRequestListener) Add(ctx context.Context, bucketRequest *v1alpha1.BucketRequest) error {
+	klog.V(3).InfoS("Add BucketRequest",
+		"name", bucketRequest.Name,
+		"ns", bucketRequest.Namespace,
+		"bucketClass", bucketRequest.Spec.BucketClassName,
+		"bucketPrefix", bucketRequest.Spec.BucketPrefix,
+	)
+
 	err := b.provisionBucketRequestOperation(ctx, bucketRequest)
 	if err != nil {
-		// Provisioning is 100% finished / not in progress.
 		switch err {
 		case util.ErrInvalidBucketClass:
-			glog.V(1).Infof("BucketClass specified does not exist while processing BucketRequest %v.", bucketRequest.Name)
-			err = nil
+			klog.ErrorS(util.ErrInvalidBucketClass,
+				"bucketRequest", bucketRequest.Name,
+				"ns", bucketRequest.Namespace,
+				"bucketClassName", bucketRequest.Spec.BucketClassName)
 		case util.ErrBucketAlreadyExists:
-			glog.V(1).Infof("Bucket already exist for this bucket request %v.", bucketRequest.Name)
-			err = nil
+			klog.V(3).InfoS("Bucket already exists",
+				"bucketRequest", bucketRequest.Name,
+				"ns", bucketRequest.Namespace,
+			)
+			return nil
 		default:
-			glog.V(1).Infof("Error occurred processing BucketRequest %v: %v", bucketRequest.Name, err)
+			klog.ErrorS(err,
+				"name", bucketRequest.Name,
+				"ns", bucketRequest.Namespace,
+				"err", err)
 		}
 		return err
 	}
 
-	glog.V(1).Infof("BucketRequest %v is successfully processed.", bucketRequest.Name)
+	klog.V(3).InfoS("Add BucketRequest success",
+		"name", bucketRequest.Name,
+		"ns", bucketRequest.Namespace)
 	return nil
 }
 
 // update processes any updates  made to the bucket request
 func (b *bucketRequestListener) Update(ctx context.Context, old, new *v1alpha1.BucketRequest) error {
-	glog.V(3).Infof("Update called for BucketRequest  %v", old.Name)
+	klog.V(3).InfoS("Update BucketRequest",
+		"name", old.Name,
+		"ns", old.Namespace)
 	return nil
 }
 
 // Delete processes a bucket for which bucket request is deleted
-func (b *bucketRequestListener) Delete(ctx context.Context, obj *v1alpha1.BucketRequest) error {
-	glog.V(3).Infof("Delete called for BucketRequest  %v", obj.Name)
+func (b *bucketRequestListener) Delete(ctx context.Context, bucketRequest *v1alpha1.BucketRequest) error {
+	klog.V(3).Infof("Delete BucketRequest  %v",
+		"name", bucketRequest.Name,
+		"ns", bucketRequest.Namespace)
 	return nil
 }
 
-// provisionBucketRequestOperation attempts to provision a bucket for the given bucketRequest.
-// Returns nil error only when the bucket was provisioned, an error it set appropriately if not.
-// Returns a normal error when the bucket was not provisioned and provisioning should be retried (requeue the bucketRequest),
-// or the special error errBucketAlreadyExists, errInvalidBucketClass, when provisioning was impossible and
-// no further attempts to provision should be tried.
+// provisionBucketRequestOperation attempts to provision a bucket for a given bucketRequest.
+// Return values
+//    nil - BucketRequest successfully processed
+//    ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
+//    ErrBucketAlreadyExists - BucketRequest already processed
+//    non-nil err - Internal error                                [requeue'd with exponential backoff]
 func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Context, bucketRequest *v1alpha1.BucketRequest) error {
-	// Most code here is identical to that found in controller.go of kube's  controller...
-	bucketClassName := b.GetBucketClass(bucketRequest)
-
-	bucketClass, err := b.bucketClient.ObjectstorageV1alpha1().BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
+	bucketClassName := b.getBucketClass(bucketRequest)
+	bucketClass, err := b.BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 	if err != nil {
-		glog.Errorf("error getting bucketclass: [%v] %v", bucketClassName, err)
+		klog.ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
 		return util.ErrInvalidBucketClass
 	}
 
@@ -92,15 +101,12 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	}
 	name = name + string(bucketRequest.GetUID())
 
-	bucket, err := b.bucketClient.ObjectstorageV1alpha1().Buckets().Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		// anything other than 404
-		if !errors.IsNotFound(err) {
-			glog.Errorf("error fetching bucket: %v", err)
-			return err
-		}
-	} else { // if bucket found
-		return nil
+	bucket, err := b.Buckets().Get(ctx, name, metav1.GetOptions{})
+	if err == nil {
+		return util.ErrBucketAlreadyExists
+	} else if !errors.IsNotFound(err) { // anything other than bucket not found error is an internal error
+		klog.ErrorS(err, "name", name)
+		return err
 	}
 
 	// create bucket
@@ -114,39 +120,36 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket.Spec.BucketRequest = &v1.ObjectReference{
 		Name:      bucketRequest.Name,
 		Namespace: bucketRequest.Namespace,
-		UID:       bucketRequest.ObjectMeta.UID}
+		UID:       bucketRequest.ObjectMeta.UID,
+	}
 	bucket.Spec.AllowedNamespaces = util.CopyStrings(bucketClass.AllowedNamespaces)
 	bucket.Spec.Protocol = *bucketClass.Protocol.DeepCopy()
 	bucket.Spec.Parameters = util.CopySS(bucketClass.Parameters)
 
-	bucket, err = b.bucketClient.ObjectstorageV1alpha1().Buckets().Create(context.Background(), bucket, metav1.CreateOptions{})
+	bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
-			return nil
+			return util.ErrBucketAlreadyExists
 		}
-		glog.V(5).Infof("Error occurred when creating Bucket %v", err)
+		klog.ErrorS(err, "name", bucket.Name)
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	updateBucketRequest := func() error {
 		bucketRequest.Spec.BucketInstanceName = bucket.Name
-		_, err := b.bucketClient.ObjectstorageV1alpha1().BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
+		_, err := b.BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 		return nil
-	})
-	if err != nil {
-		return err
 	}
-	glog.Infof("Finished creating Bucket %v", bucket.Name)
-	return nil
+
+	return retry.RetryOnConflict(retry.DefaultRetry, updateBucketRequest)
 }
 
-// GetBucketClass returns BucketClassName. If no bucket class was in the request it returns empty
+// getBucketClass returns BucketClassName. If no bucket class was in the request it returns empty
 // TODO this methods can be more sophisticate to address bucketClass overrides using annotations just like SC.
-func (b *bucketRequestListener) GetBucketClass(bucketRequest *v1alpha1.BucketRequest) string {
-
+func (b *bucketRequestListener) getBucketClass(bucketRequest *v1alpha1.BucketRequest) string {
 	if bucketRequest.Spec.BucketClassName != "" {
 		return bucketRequest.Spec.BucketClassName
 	}
@@ -154,27 +157,37 @@ func (b *bucketRequestListener) GetBucketClass(bucketRequest *v1alpha1.BucketReq
 	return ""
 }
 
-func (b *bucketRequestListener) FindBucket(ctx context.Context, br *v1alpha1.BucketRequest) *v1alpha1.Bucket {
-	bucketList, err := b.bucketClient.ObjectstorageV1alpha1().Buckets().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil
-	}
-	if len(bucketList.Items) > 0 {
-		for _, bucket := range bucketList.Items {
-			if strings.HasPrefix(bucket.Name, br.Spec.BucketPrefix) &&
-				bucket.Spec.BucketClassName == br.Spec.BucketClassName &&
-				bucket.Spec.BucketRequest.Name == br.Name &&
-				bucket.Spec.BucketRequest.Namespace == br.Namespace &&
-				bucket.Spec.BucketRequest.UID == br.ObjectMeta.UID {
-				return &bucket
-			}
-		}
-	}
-	return nil
-}
-
 // cloneTheBucket clones a bucket to a different namespace when a BR is for brownfield.
 func (b *bucketRequestListener) cloneTheBucket(bucketRequest *v1alpha1.BucketRequest) error {
-	glog.V(1).Infof("Clone called for Bucket %s", bucketRequest.Spec.BucketInstanceName)
+	klog.InfoS("Cloning Bucket", "name", bucketRequest.Spec.BucketInstanceName)
 	return util.ErrNotImplemented
+}
+
+func (b *bucketRequestListener) InitializeKubeClient(k kubeclientset.Interface) {
+	b.kubeClient = k
+}
+
+func (b *bucketRequestListener) InitializeBucketClient(bc bucketclientset.Interface) {
+	b.bucketClient = bc
+}
+
+func (b *bucketRequestListener) Buckets() objectstoragev1alpha1.BucketInterface {
+	if b.bucketClient != nil {
+		return b.bucketClient.ObjectstorageV1alpha1().Buckets()
+	}
+	panic("uninitialized listener")
+}
+
+func (b *bucketRequestListener) BucketClasses() objectstoragev1alpha1.BucketClassInterface {
+	if b.bucketClient != nil {
+		return b.bucketClient.ObjectstorageV1alpha1().BucketClasses()
+	}
+	panic("uninitialized listener")
+}
+
+func (b *bucketRequestListener) BucketRequests(namespace string) objectstoragev1alpha1.BucketRequestInterface {
+	if b.bucketClient != nil {
+		return b.bucketClient.ObjectstorageV1alpha1().BucketRequests(namespace)
+	}
+	panic("uninitialized listener")
 }

@@ -3,10 +3,7 @@ module github.com/kubernetes-sigs/container-object-storage-interface-controller
 go 1.15
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
-	github.com/google/uuid v1.1.2 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20190328170749-bb2674552d8f // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
@@ -29,8 +26,8 @@ require (
 	k8s.io/apiextensions-apiserver v0.19.4
 	k8s.io/apimachinery v0.19.4
 	k8s.io/client-go v0.19.4
-	k8s.io/klog/v2 v2.4.0 // indirect
+	k8s.io/klog/v2 v2.4.0
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
-	sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210225042325-7c26b4fc1ed9
+	sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210315005104-5e1814a6aedd
 	sigs.k8s.io/controller-tools v0.4.1
 )
