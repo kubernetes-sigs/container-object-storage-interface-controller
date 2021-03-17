@@ -14,7 +14,7 @@ import (
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/bucketrequest"
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 var cmd = &cobra.Command{
@@ -29,34 +29,20 @@ var cmd = &cobra.Command{
 }
 
 var kubeConfig string
+var verbosity int
 
 func init() {
 	viper.AutomaticEnv()
 
-	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	flag.Set("logtostderr", "true")
+	flag.Set("alsologtostderr", "true")
+	kflags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(kflags)
 
-	strFlag := func(c *cobra.Command, ptr *string, name string, short string, dfault string, desc string) {
-		c.PersistentFlags().
-			StringVarP(ptr, name, short, dfault, desc)
-	}
-	strFlag(cmd, &kubeConfig, "kubeconfig", "", kubeConfig, "path to kubeconfig file")
+	cmd.PersistentFlags().AddGoFlagSet(kflags)
+	cmd.PersistentFlags().StringVarP(&kubeConfig, "kubeconfig", "", kubeConfig, "path to kubeconfig file")
 
-	hideFlag := func(name string) {
-		cmd.PersistentFlags().MarkHidden(name)
-	}
-	hideFlag("alsologtostderr")
-	hideFlag("log_backtrace_at")
-	hideFlag("log_dir")
-	hideFlag("logtostderr")
-	hideFlag("master")
-	hideFlag("stderrthreshold")
-	hideFlag("vmodule")
-
-	// suppress the incorrect prefix in glog output
-	flag.CommandLine.Parse([]string{})
+	//flag.CommandLine.Parse([]string{})
 	viper.BindPFlags(cmd.PersistentFlags())
-
 }
 
 func main() {
@@ -72,16 +58,16 @@ func main() {
 	}()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		glog.Fatal(err.Error())
+		klog.Error(err)
 	}
 }
 
 func run(ctx context.Context, args []string) error {
-	ctrl, err := bucketcontroller.NewDefaultObjectStorageController("controller-manager", "leader-lock", 40)
+	ctrl, err := bucketcontroller.NewDefaultObjectStorageController("cosi-controller-manager", "leader-lock", 40)
 	if err != nil {
 		return err
 	}
-	ctrl.AddBucketRequestListener(bucketrequest.NewListener())
+	ctrl.AddBucketRequestListener(bucketrequest.NewBucketRequestListener())
 	ctrl.AddBucketAccessRequestListener(bucketaccessrequest.NewListener())
 	return ctrl.Run(ctx)
 }

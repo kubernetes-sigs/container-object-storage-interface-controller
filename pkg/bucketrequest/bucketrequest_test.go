@@ -86,7 +86,7 @@ func runCreateBucket(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewListener()
+	listener := NewBucketRequestListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 
@@ -129,7 +129,7 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewListener()
+	listener := NewBucketRequestListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 
@@ -183,7 +183,7 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewListener()
+	listener := NewBucketRequestListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 

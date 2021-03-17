@@ -14,7 +14,7 @@ import (
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 type bucketAccessRequestListener struct {
@@ -35,7 +35,7 @@ func (b *bucketAccessRequestListener) InitializeBucketClient(bc bucketclientset.
 }
 
 func (b *bucketAccessRequestListener) Add(ctx context.Context, obj *v1alpha1.BucketAccessRequest) error {
-	glog.V(1).Infof("Add called for BucketAccessRequest %s", obj.Name)
+	klog.V(1).Infof("Add called for BucketAccessRequest %s", obj.Name)
 	bucketAccessRequest := obj
 
 	err := b.provisionBucketAccess(ctx, bucketAccessRequest)
@@ -43,25 +43,25 @@ func (b *bucketAccessRequestListener) Add(ctx context.Context, obj *v1alpha1.Buc
 		// Provisioning is 100% finished / not in progress.
 		switch err {
 		case util.ErrBucketAccessAlreadyExists:
-			glog.V(1).Infof("BucketAccess already exist for this BucketAccessRequest %v.", bucketAccessRequest.Name)
+			klog.V(1).Infof("BucketAccess already exist for this BucketAccessRequest %v.", bucketAccessRequest.Name)
 			err = nil
 		default:
-			glog.V(1).Infof("Error occurred processing BucketAccessRequest %v: %v", bucketAccessRequest.Name, err)
+			klog.V(1).Infof("Error occurred processing BucketAccessRequest %v: %v", bucketAccessRequest.Name, err)
 		}
 		return err
 	}
 
-	glog.V(1).Infof("BucketAccessRequest %v is successfully processed.", bucketAccessRequest.Name)
+	klog.V(1).Infof("BucketAccessRequest %v is successfully processed.", bucketAccessRequest.Name)
 	return nil
 }
 
 func (b *bucketAccessRequestListener) Update(ctx context.Context, old, new *v1alpha1.BucketAccessRequest) error {
-	glog.V(1).Infof("Update called for BucketAccessRequest %v", old.Name)
+	klog.V(1).Infof("Update called for BucketAccessRequest %v", old.Name)
 	return nil
 }
 
 func (b *bucketAccessRequestListener) Delete(ctx context.Context, obj *v1alpha1.BucketAccessRequest) error {
-	glog.V(1).Infof("Delete called for BucketAccessRequest %v", obj.Name)
+	klog.V(1).Infof("Delete called for BucketAccessRequest %v", obj.Name)
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	if err != nil {
 		// anything other than 404
 		if !errors.IsNotFound(err) {
-			glog.Errorf("error fetching bucketaccess: %v", err)
+			klog.Errorf("error fetching bucketaccess: %v", err)
 			return err
 		}
 	} else { // if bucket found
@@ -93,7 +93,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	bucketAccessClass, err := bacClient.Get(ctx, bucketAccessClassName, metav1.GetOptions{})
 	if err != nil {
 		// bucket access class is invalid or not specified, cannot continue with provisioning.
-		glog.Errorf("error fetching bucketaccessclass [%v]: %v", bucketAccessClassName, err)
+		klog.Errorf("error fetching bucketaccessclass [%v]: %v", bucketAccessClassName, err)
 		return util.ErrInvalidBucketAccessClass
 	}
 
@@ -104,7 +104,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	}
 	bucketRequest, err := brClient(bucketAccessRequest.Namespace).Get(ctx, brName, metav1.GetOptions{})
 	if err != nil {
-		glog.Errorf("error fetching bucket request [%v]: %v", brName, err)
+		klog.Errorf("error fetching bucket request [%v]: %v", brName, err)
 		return err
 	}
 
@@ -163,7 +163,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	glog.Infof("Finished creating BucketAccess %v", bucketaccess.Name)
+	klog.Infof("Finished creating BucketAccess %v", bucketaccess.Name)
 	return nil
 }
 
