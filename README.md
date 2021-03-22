@@ -1,6 +1,6 @@
 # Container Object Storage Controller
 
-Container Object Storage Interface (COSI) controller responsible to manage lifecycle of COSI objects.
+Container Object Storage Interface (COSI) controller is responsible to manage lifecycle of COSI objects.
 Specifically, this controller monitors the lifecycle of the user-facing CRDs:
 
 - BucketRequest - Represents a request to provision a Bucket
