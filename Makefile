@@ -20,9 +20,12 @@ release-tools/build.make:
 	$(eval TMP := $(shell mktemp -d))
 	$(shell cd ${TMP} && git clone https://github.com/kubernetes-sigs/container-object-storage-interface-spec)
 	$(shell cp -r ${TMP}/container-object-storage-interface-spec/release-tools ${CURDIR}/)
-	$(shell rm -rf ${TMP})  
+	$(shell rm -rf ${TMP})
 	ln -s release-tools/travis.yml travis.yml
 
 CMDS=controller-manager
 
 include release-tools/build.make
+
+IMAGE_NAME=quay.io/containerobjectstorage/objectstorage-controller
+IMAGE_TAGS=canary
