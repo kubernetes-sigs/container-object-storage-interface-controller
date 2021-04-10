@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
@@ -78,15 +77,9 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	coreClient := b.kubeClient.CoreV1()
 
 	name := string(bucketAccessRequest.GetUID())
-	_, err := baClient.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		// anything other than 404
-		if !errors.IsNotFound(err) {
-			klog.Errorf("error fetching bucketaccess: %v", err)
-			return err
-		}
-	} else { // if bucket found
-		return nil
+
+	if bucketAccessRequest.Spec.BucketAccessName != "" {
+		return util.ErrBucketAccessAlreadyExists
 	}
 
 	bucketAccessClassName := bucketAccessRequest.Spec.BucketAccessClassName
@@ -145,39 +138,15 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	bucketaccess.Spec.Parameters = util.CopySS(bucketAccessClass.Parameters)
 
 	bucketaccess, err = baClient.Create(context.Background(), bucketaccess, metav1.CreateOptions{})
-	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			return nil
-		}
+	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		bucketAccessRequest.Spec.BucketAccessName = bucketaccess.Name
-		_, err := barClient(bucketAccessRequest.Namespace).Update(ctx, bucketAccessRequest, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	bucketAccessRequest.Spec.BucketAccessName = bucketaccess.Name
+	_, err = barClient(bucketAccessRequest.Namespace).Update(ctx, bucketAccessRequest, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 	klog.Infof("Finished creating BucketAccess %v", bucketaccess.Name)
-	return nil
-}
-
-func (b *bucketAccessRequestListener) FindBucketAccess(ctx context.Context, bar *v1alpha1.BucketAccessRequest) *v1alpha1.BucketAccess {
-	bucketAccessList, err := b.bucketClient.ObjectstorageV1alpha1().BucketAccesses().List(ctx, metav1.ListOptions{})
-	if err != nil || len(bucketAccessList.Items) <= 0 {
-		return nil
-	}
-	for _, bucketaccess := range bucketAccessList.Items {
-		if bucketaccess.Spec.BucketAccessRequest.Name == bar.Name &&
-			bucketaccess.Spec.BucketAccessRequest.Namespace == bar.Namespace &&
-			bucketaccess.Spec.BucketAccessRequest.UID == bar.UID {
-			return &bucketaccess
-		}
-	}
 	return nil
 }

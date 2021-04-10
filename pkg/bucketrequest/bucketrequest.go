@@ -6,7 +6,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -101,16 +100,12 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	}
 	name = name + string(bucketRequest.GetUID())
 
-	bucket, err := b.Buckets().Get(ctx, name, metav1.GetOptions{})
-	if err == nil {
+	if bucketRequest.Spec.BucketInstanceName != "" {
 		return util.ErrBucketAlreadyExists
-	} else if !errors.IsNotFound(err) { // anything other than bucket not found error is an internal error
-		klog.ErrorS(err, "name", name)
-		return err
 	}
 
 	// create bucket
-	bucket = &v1alpha1.Bucket{}
+	bucket := &v1alpha1.Bucket{}
 
 	bucket.Name = name
 	bucket.Spec.Provisioner = bucketClass.Provisioner
@@ -127,24 +122,17 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket.Spec.Parameters = util.CopySS(bucketClass.Parameters)
 
 	bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
-	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			return util.ErrBucketAlreadyExists
-		}
+	if err != nil && !errors.IsAlreadyExists(err) {
 		klog.ErrorS(err, "name", bucket.Name)
 		return err
 	}
 
-	updateBucketRequest := func() error {
-		bucketRequest.Spec.BucketInstanceName = bucket.Name
-		_, err := b.BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
+	bucketRequest.Spec.BucketInstanceName = bucket.Name
+	_, err = b.BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
+	if err != nil {
+		return err
 	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, updateBucketRequest)
+	return nil
 }
 
 // getBucketClass returns BucketClassName. If no bucket class was in the request it returns empty
