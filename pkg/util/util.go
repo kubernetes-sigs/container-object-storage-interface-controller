@@ -165,7 +165,7 @@ func GetBuckets(ctx context.Context, client bucketclientset.Interface, numExpect
 // This is used by bucket request unit tests
 func ValidateBucket(bucket types.Bucket, bucketrequest types.BucketRequest, bucketclass types.BucketClass) bool {
 	if strings.HasPrefix(bucket.Name, bucketrequest.Spec.BucketPrefix) &&
-		bucketrequest.Spec.BucketInstanceName == bucket.Name &&
+		bucketrequest.Status.BucketName == bucket.Name &&
 		bucket.Spec.BucketClassName == bucketrequest.Spec.BucketClassName &&
 		bucket.Spec.BucketRequest.Name == bucketrequest.Name &&
 		bucket.Spec.BucketRequest.Namespace == bucketrequest.Namespace &&
@@ -173,8 +173,7 @@ func ValidateBucket(bucket types.Bucket, bucketrequest types.BucketRequest, buck
 		bucket.Spec.BucketClassName == bucketclass.Name &&
 		reflect.DeepEqual(bucket.Spec.Parameters, bucketclass.Parameters) &&
 		bucket.Spec.Provisioner == bucketclass.Provisioner &&
-		bucket.Spec.RetentionPolicy == bucketclass.RetentionPolicy &&
-		bucket.Spec.AnonymousAccessMode == bucketclass.AnonymousAccessMode {
+		bucket.Spec.DeletionPolicy == bucketclass.DeletionPolicy {
 		return true
 	}
 	return false
@@ -202,12 +201,11 @@ func GetBucketAccesses(ctx context.Context, client bucketclientset.Interface, nu
 // Validates the content of the bucket access against bucket access request and backet access class
 // This is used by bucket access request unit tests
 func ValidateBucketAccess(bucketaccess types.BucketAccess, bucketaccessrequest types.BucketAccessRequest, bucketaccessclass types.BucketAccessClass) bool {
-	if bucketaccess.Spec.BucketInstanceName != "" &&
-		bucketaccessrequest.Spec.BucketAccessName == bucketaccess.Name &&
+	if bucketaccess.Spec.BucketName != "" &&
+		bucketaccessrequest.Status.BucketAccessName == bucketaccess.Name &&
 		bucketaccess.Spec.BucketAccessRequest.UID == bucketaccessrequest.UID &&
 		bucketaccess.Spec.ServiceAccount.Name == bucketaccessrequest.Spec.ServiceAccountName &&
-		bucketaccess.Spec.PolicyActionsConfigMapData != "" &&
-		bucketaccess.Spec.Provisioner == bucketaccessclass.Provisioner {
+		bucketaccess.Spec.PolicyActionsConfigMapData != "" {
 		return true
 	}
 	return false

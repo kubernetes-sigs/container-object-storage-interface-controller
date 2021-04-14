@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -100,7 +101,7 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	}
 	name = name + string(bucketRequest.GetUID())
 
-	if bucketRequest.Spec.BucketInstanceName != "" {
+	if bucketRequest.Status.BucketName != "" {
 		return util.ErrBucketAlreadyExists
 	}
 
@@ -108,10 +109,10 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket := &v1alpha1.Bucket{}
 
 	bucket.Name = name
+	bucket.Spec.BucketID = name
 	bucket.Spec.Provisioner = bucketClass.Provisioner
-	bucket.Spec.RetentionPolicy = bucketClass.RetentionPolicy
-	bucket.Spec.AnonymousAccessMode = bucketClass.AnonymousAccessMode
 	bucket.Spec.BucketClassName = bucketClass.Name
+	bucket.Spec.DeletionPolicy = bucketClass.DeletionPolicy
 	bucket.Spec.BucketRequest = &v1.ObjectReference{
 		Name:      bucketRequest.Name,
 		Namespace: bucketRequest.Namespace,
@@ -127,11 +128,19 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 		return err
 	}
 
-	bucketRequest.Spec.BucketInstanceName = bucket.Name
-	_, err = b.BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{})
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		bucketRequest.Status.BucketName = bucket.Name
+		bucketRequest.Status.BucketAvailable = true
+		_, err := b.BucketRequests(bucketRequest.Namespace).UpdateStatus(ctx, bucketRequest, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
+	klog.Infof("Finished creating Bucket %v", bucket.Name)
 	return nil
 }
 
@@ -147,7 +156,7 @@ func (b *bucketRequestListener) getBucketClass(bucketRequest *v1alpha1.BucketReq
 
 // cloneTheBucket clones a bucket to a different namespace when a BR is for brownfield.
 func (b *bucketRequestListener) cloneTheBucket(bucketRequest *v1alpha1.BucketRequest) error {
-	klog.InfoS("Cloning Bucket", "name", bucketRequest.Spec.BucketInstanceName)
+	klog.InfoS("Cloning Bucket", "name", bucketRequest.Status.BucketName)
 	return util.ErrNotImplemented
 }
 

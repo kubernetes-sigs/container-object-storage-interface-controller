@@ -31,6 +31,7 @@ spec:
       serviceAccountName: objectstorage-controller-sa
       containers:
         - name: objectstorage-controller
-          image: quay.io/containerobjectstorage/objectstorage-controller:latest
+          image: quay.io/containerobjectstorage/objectstorage-controller:canary
+          imagePullPolicy: Always
           args:
           - "--v=5"

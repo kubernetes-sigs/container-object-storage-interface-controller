@@ -11,7 +11,7 @@ metadata:
     app.kubernetes.io/name: container-object-storage-interface-controller
 rules:
 - apiGroups: ["objectstorage.k8s.io"]
-  resources: ["bucketrequests", "bucketaccessrequests"]
+  resources: ["bucketrequests", "bucketaccessrequests", "bucketrequests/status", "bucketaccessrequests/status"]
   verbs: ["get", "list", "watch", "update"]
 - apiGroups: ["objectstorage.k8s.io"]
   resources: ["buckets", "bucketaccesses"]
