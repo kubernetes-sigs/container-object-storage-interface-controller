@@ -55,7 +55,6 @@ var goldAccessClass = types.BucketAccessClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "classaccessgold",
 	},
-	Provisioner:            "provisioner1",
 	PolicyActionsConfigMap: &v1.ObjectReference{Name: "testconfigmap", Namespace: "default"},
 	Parameters:             classGoldAccessParameters,
 }
@@ -71,9 +70,12 @@ var bucketRequest1 = types.BucketRequest{
 		UID:       "br-12345",
 	},
 	Spec: types.BucketRequestSpec{
-		BucketPrefix:       "cosi",
-		BucketClassName:    "classgold",
-		BucketInstanceName: "cosi1234567890",
+		BucketPrefix:    "cosi",
+		BucketClassName: "classgold",
+	},
+	Status: types.BucketRequestStatus{
+		BucketName:      "cosi1234567890",
+		BucketAvailable: true,
 	},
 }
 

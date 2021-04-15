@@ -26,9 +26,16 @@ var goldClass = types.BucketClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "classgold",
 	},
-	AllowedNamespaces:    []string{"default", "cosins"},
-	Parameters:           classGoldParameters,
-	Protocol:             types.Protocol{Name: "s3"},
+	AllowedNamespaces: []string{"default", "cosins"},
+	Parameters:        classGoldParameters,
+	Protocol: types.Protocol{
+		S3: &types.S3Protocol{
+			Endpoint:         "endpoint",
+			BucketName:       "cosibucket",
+			Region:           "us-east-1",
+			SignatureVersion: "S3V4",
+		},
+	},
 	IsDefaultBucketClass: false,
 }
 

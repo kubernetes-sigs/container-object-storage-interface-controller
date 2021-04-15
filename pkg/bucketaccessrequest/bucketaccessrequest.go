@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
@@ -78,7 +79,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 
 	name := string(bucketAccessRequest.GetUID())
 
-	if bucketAccessRequest.Spec.BucketAccessName != "" {
+	if bucketAccessRequest.Status.BucketAccessName != "" {
 		return util.ErrBucketAccessAlreadyExists
 	}
 
@@ -101,7 +102,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 		return err
 	}
 
-	if bucketRequest.Spec.BucketInstanceName == "" {
+	if bucketRequest.Status.BucketName == "" || !bucketRequest.Status.BucketAvailable {
 		return util.ErrWaitForBucketProvisioning
 	}
 
@@ -117,7 +118,8 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	bucketaccess := &v1alpha1.BucketAccess{}
 	bucketaccess.Name = name
 
-	bucketaccess.Spec.BucketInstanceName = bucketRequest.Spec.BucketInstanceName
+	bucketaccess.Spec.BucketName = bucketRequest.Status.BucketName
+
 	bucketaccess.Spec.BucketAccessRequest = &v1.ObjectReference{
 		Name:      bucketAccessRequest.Name,
 		Namespace: bucketAccessRequest.Namespace,
@@ -134,7 +136,7 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 		return err
 	}
 	//  bucketaccess.Spec.Principal - set by the driver
-	bucketaccess.Spec.Provisioner = bucketAccessClass.Provisioner
+
 	bucketaccess.Spec.Parameters = util.CopySS(bucketAccessClass.Parameters)
 
 	bucketaccess, err = baClient.Create(context.Background(), bucketaccess, metav1.CreateOptions{})
@@ -142,8 +144,15 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 		return err
 	}
 
-	bucketAccessRequest.Spec.BucketAccessName = bucketaccess.Name
-	_, err = barClient(bucketAccessRequest.Namespace).Update(ctx, bucketAccessRequest, metav1.UpdateOptions{})
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		bucketAccessRequest.Status.BucketAccessName = bucketaccess.Name
+		bucketAccessRequest.Status.AccessGranted = true
+		_, err := barClient(bucketAccessRequest.Namespace).UpdateStatus(ctx, bucketAccessRequest, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}

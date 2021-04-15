@@ -5,3 +5,5 @@
 travis.yml
 release-tools
 bin
+vendor/
+.idea/
