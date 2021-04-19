@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes/fake"
+
+	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset/fake"
 
-	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
-	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
+	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
 var classGoldParameters = map[string]string{

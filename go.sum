@@ -783,8 +783,8 @@ k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.7/go.mod h1:PHgbrJT7lCHcxMU+mDHEm+nx46H4zuuHZkDP6icnhu0=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.9/go.mod h1:dzAXnQbTRyDlZPJX2SUPEqvnB+j7AJjtlox7PEwigU0=
-sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210330175159-2cdabb1a5dc7 h1:M2ZMhWdq9Az8TFj8G6ZffFUpR4XG7Qy8h8ZGsZhi9Xg=
-sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210330175159-2cdabb1a5dc7/go.mod h1:5n4lNKN4uOMW2NTqJ9r8qRAiqh5dZRZB7CNOkFihLfM=
+sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210416205422-83cd0d53ce7f h1:LtkVxN0N+qKHLuYE/N5qxSkJv/3bWkr3+9ZBVwiq1tw=
+sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210416205422-83cd0d53ce7f/go.mod h1:WTzZGS4Q6MdQqDihJdMh2kCvqMx9Amhx0KIainA4lXQ=
 sigs.k8s.io/container-object-storage-interface-spec v0.0.0-20210329232956-3bbacbbc9c19 h1:LrLrBCBqO7O/VjJtTrDSj3/f7hLSQaCIouLZFnHGxFg=
 sigs.k8s.io/container-object-storage-interface-spec v0.0.0-20210329232956-3bbacbbc9c19/go.mod h1:kafkL5l/lTUrZXhVi/9p1GzpEE/ts29BkWkL3Ao33WU=
 sigs.k8s.io/controller-runtime v0.6.3 h1:SBbr+inLPEKhvlJtrvDcwIpm+uhDvp63Bl72xYJtoOE=

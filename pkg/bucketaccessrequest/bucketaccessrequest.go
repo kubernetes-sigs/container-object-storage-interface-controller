@@ -7,14 +7,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 
-	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
-	"k8s.io/klog/v2"
+	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
 type bucketAccessRequestListener struct {
@@ -144,15 +143,9 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		bucketAccessRequest.Status.BucketAccessName = bucketaccess.Name
-		bucketAccessRequest.Status.AccessGranted = true
-		_, err := barClient(bucketAccessRequest.Namespace).UpdateStatus(ctx, bucketAccessRequest, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	bucketAccessRequest.Status.BucketAccessName = bucketaccess.Name
+	bucketAccessRequest.Status.AccessGranted = true
+	_, err = barClient(bucketAccessRequest.Namespace).UpdateStatus(ctx, bucketAccessRequest, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
