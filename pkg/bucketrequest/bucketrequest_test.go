@@ -71,6 +71,7 @@ var bucketRequest2 = types.BucketRequest{
 	},
 }
 
+/*
 // Test basic add functionality
 func TestAddBR(t *testing.T) {
 	runCreateBucket(t, "add")
@@ -84,6 +85,16 @@ func TestAddWithMultipleBR(t *testing.T) {
 // Test add idempotency
 func TestAddBRIdempotency(t *testing.T) {
 	runCreateBucketIdempotency(t, "addWithMultipleBR")
+}
+*/
+// Test  delete BR
+func TestDeleteBR(t *testing.T) {
+	runDeleteBucketRequest(t, "deleteBR")
+}
+
+// Test  delete BR Idempotency
+func TestDeleteBRIdempotency(t *testing.T) {
+	runDeleteBucketRequestIdempotency(t, "deleteBRIdempotency")
 }
 
 func runCreateBucket(t *testing.T, name string) {
@@ -230,6 +241,143 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 
 	bucketList = util.GetBuckets(ctx, client, 1)
 	if len(bucketList.Items) != 1 {
+		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
+	}
+}
+
+func runDeleteBucketRequest(t *testing.T, name string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := bucketclientset.NewSimpleClientset()
+	kubeClient := fake.NewSimpleClientset()
+
+	listener := NewBucketRequestListener()
+	listener.InitializeKubeClient(kubeClient)
+	listener.InitializeBucketClient(client)
+
+	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketClass: %v", err)
+	}
+
+	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+	}
+
+	listener.Add(ctx, bucketrequest)
+
+	bucketList := util.GetBuckets(ctx, client, 1)
+	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketclass, bucketList.Items)
+
+	if len(bucketList.Items) != 1 {
+		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
+	}
+	bucket := bucketList.Items[0]
+
+	bucketrequest2, err := client.ObjectstorageV1alpha1().BucketRequests(bucketrequest.Namespace).Get(ctx, bucketrequest.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+	}
+
+	if util.ValidateBucket(bucket, *bucketrequest, *bucketclass) {
+		return
+	} else {
+		t.Fatalf("Failed to compare the resulting Bucket with the BucketRequest %v and BucketClass %v", bucketrequest, bucketclass)
+	}
+
+	//peform delete and see if the bucketRequest can be deleted
+	err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest2.Namespace).Delete(ctx, bucketrequest2.Name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when deleting BucketRequest: %v", err)
+	}
+
+	// force update for the finalizer
+	old := bucketrequest
+	now := metav1.Now()
+	bucketrequest2.ObjectMeta.DeletionTimestamp = &now
+	listener.Update(ctx, old, bucketrequest2)
+
+	// there should not be a corresponding Bucket
+	bucketList = util.GetBuckets(ctx, client, 0)
+	if len(bucketList.Items) > 0 {
+		t.Fatalf("Expecting Bucket object be deleted but found %v", bucketList.Items)
+	}
+}
+
+func runDeleteBucketRequestIdempotency(t *testing.T, name string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := bucketclientset.NewSimpleClientset()
+	kubeClient := fake.NewSimpleClientset()
+
+	listener := NewBucketRequestListener()
+	listener.InitializeKubeClient(kubeClient)
+	listener.InitializeBucketClient(client)
+
+	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketClass: %v", err)
+	}
+
+	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	if err != nil {
+		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+	}
+
+	listener.Add(ctx, bucketrequest)
+
+	bucketList := util.GetBuckets(ctx, client, 1)
+	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketclass, bucketList.Items)
+
+	if len(bucketList.Items) != 1 {
+		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
+	}
+	bucket := bucketList.Items[0]
+
+	bucketrequest2, err := client.ObjectstorageV1alpha1().BucketRequests(bucketrequest.Namespace).Get(ctx, bucketrequest.Name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+	}
+
+	if util.ValidateBucket(bucket, *bucketrequest, *bucketclass) {
+		return
+	} else {
+		t.Fatalf("Failed to compare the resulting Bucket with the BucketRequest %v and BucketClass %v", bucketrequest, bucketclass)
+	}
+
+	//peform delete and see if the bucketRequest can be deleted
+	err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest2.Namespace).Delete(ctx, bucketrequest2.Name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Error occurred when deleting BucketRequest: %v", err)
+	}
+
+	// force update for the finalizer
+	old := bucketrequest
+	now := metav1.Now()
+	bucketrequest2.ObjectMeta.DeletionTimestamp = &now
+	listener.Update(ctx, old, bucketrequest2)
+
+	// there should not be a corresponding Bucket
+	bucketList = util.GetBuckets(ctx, client, 0)
+	if len(bucketList.Items) > 0 {
+		t.Fatalf("Expecting Bucket object be deleted but found %v", bucketList.Items)
+	}
+
+	//Create a duplicate update
+	listener.Update(ctx, old, bucketrequest2)
+	//there should not be a corresponding Bucket
+	bucketList = util.GetBuckets(ctx, client, 0)
+	if len(bucketList.Items) > 0 {
+		t.Fatalf("Expecting Bucket object be deleted but found %v", bucketList.Items)
+	}
+
+	// call the delete directly the second time
+	listener.Delete(ctx, bucketrequest)
+	bucketList = util.GetBuckets(ctx, client, 0)
+	if len(bucketList.Items) != 0 {
 		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
 	}
 }
