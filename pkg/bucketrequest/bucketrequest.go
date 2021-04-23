@@ -6,15 +6,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
-
-	"github.com/kubernetes-sigs/container-object-storage-interface-controller/pkg/util"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
 	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/clientset/typed/objectstorage.k8s.io/v1alpha1"
 
-	"k8s.io/klog/v2"
+	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
 // bucketRequestListener is a resource handler for bucket requests objects
@@ -109,7 +108,7 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket := &v1alpha1.Bucket{}
 
 	bucket.Name = name
-	bucket.Spec.BucketID = name
+	bucket.Status.BucketID = name
 	bucket.Spec.Provisioner = bucketClass.Provisioner
 	bucket.Spec.BucketClassName = bucketClass.Name
 	bucket.Spec.DeletionPolicy = bucketClass.DeletionPolicy
@@ -128,18 +127,13 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		bucketRequest.Status.BucketName = bucket.Name
-		bucketRequest.Status.BucketAvailable = true
-		_, err := b.BucketRequests(bucketRequest.Namespace).UpdateStatus(ctx, bucketRequest, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	bucketRequest.Status.BucketName = bucket.Name
+	bucketRequest.Status.BucketAvailable = true
+	_, err = b.BucketRequests(bucketRequest.Namespace).UpdateStatus(ctx, bucketRequest, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
+
 	klog.Infof("Finished creating Bucket %v", bucket.Name)
 	return nil
 }
