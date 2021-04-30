@@ -119,6 +119,15 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	}
 	bucket.Spec.AllowedNamespaces = util.CopyStrings(bucketClass.AllowedNamespaces)
 	bucket.Spec.Protocol = *bucketClass.Protocol.DeepCopy()
+	if bucket.Spec.Protocol.S3 != nil {
+		bucket.Spec.Protocol.S3.BucketName = bucket.Name
+	} else if bucket.Spec.Protocol.GCS != nil {
+		bucket.Spec.Protocol.GCS.BucketName = bucket.Name
+	} else if bucket.Spec.Protocol.AzureBlob != nil {
+		bucket.Spec.Protocol.AzureBlob.ContainerName = bucket.Name
+	} else {
+		panic("unreachable code")
+	}
 	bucket.Spec.Parameters = util.CopySS(bucketClass.Parameters)
 
 	bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
