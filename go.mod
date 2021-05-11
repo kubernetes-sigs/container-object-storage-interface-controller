@@ -28,6 +28,7 @@ require (
 	k8s.io/client-go v0.19.4
 	k8s.io/klog/v2 v2.4.0
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
-	sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210416205422-83cd0d53ce7f
+	sigs.k8s.io/container-object-storage-interface-api v0.0.0-20210507174303-fac7c5076c3d
+	sigs.k8s.io/controller-runtime v0.6.3
 	sigs.k8s.io/controller-tools v0.4.1
 )

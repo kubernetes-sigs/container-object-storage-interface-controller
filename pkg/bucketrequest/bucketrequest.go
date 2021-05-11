@@ -8,12 +8,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
 	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/clientset/typed/objectstorage.k8s.io/v1alpha1"
 
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
+)
+
+const (
+	finalizer = "cosi.objectstorage.k8s.io/bucketrequest-protection"
 )
 
 // bucketRequestListener is a resource handler for bucket requests objects
@@ -77,6 +82,7 @@ func (b *bucketRequestListener) Delete(ctx context.Context, bucketRequest *v1alp
 	klog.V(3).Infof("Delete BucketRequest  %v",
 		"name", bucketRequest.Name,
 		"ns", bucketRequest.Namespace)
+
 	return nil
 }
 
@@ -124,6 +130,11 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
 	if err != nil && !errors.IsAlreadyExists(err) {
 		klog.ErrorS(err, "name", bucket.Name)
+		return err
+	}
+
+	controllerutil.AddFinalizer(bucketRequest, finalizer)
+	if _, err := b.bucketClient.ObjectstorageV1alpha1().BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 

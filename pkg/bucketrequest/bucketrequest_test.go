@@ -30,8 +30,6 @@ var goldClass = types.BucketClass{
 	Parameters:        classGoldParameters,
 	Protocol: types.Protocol{
 		S3: &types.S3Protocol{
-			Endpoint:         "endpoint",
-			BucketName:       "cosibucket",
 			Region:           "us-east-1",
 			SignatureVersion: "S3V4",
 		},
