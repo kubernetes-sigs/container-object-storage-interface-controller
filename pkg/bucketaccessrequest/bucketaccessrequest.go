@@ -8,12 +8,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
+)
+
+const (
+	finalizer = "cosi.objectstorage.k8s.io/bucketaccessrequest-protection"
 )
 
 type bucketAccessRequestListener struct {
@@ -59,8 +64,9 @@ func (b *bucketAccessRequestListener) Update(ctx context.Context, old, new *v1al
 	return nil
 }
 
-func (b *bucketAccessRequestListener) Delete(ctx context.Context, obj *v1alpha1.BucketAccessRequest) error {
-	klog.V(1).Infof("Delete called for BucketAccessRequest %v", obj.Name)
+func (b *bucketAccessRequestListener) Delete(ctx context.Context, bucketAccessRequest *v1alpha1.BucketAccessRequest) error {
+	klog.V(1).Infof("Delete called for BucketAccessRequest %v", bucketAccessRequest.Name)
+
 	return nil
 }
 
@@ -140,6 +146,11 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 
 	bucketaccess, err = baClient.Create(context.Background(), bucketaccess, metav1.CreateOptions{})
 	if err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+
+	controllerutil.AddFinalizer(bucketAccessRequest, finalizer)
+	if _, err := b.bucketClient.ObjectstorageV1alpha1().BucketAccessRequests(bucketAccessRequest.Namespace).Update(ctx, bucketAccessRequest, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 
