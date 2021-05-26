@@ -37,20 +37,16 @@ make test
 
 ## References
 
-- [Documentation](https://github.com/kubernetes-sigs/container-object-storage-interface-api/tree/master/docs/index.md)
-- [Deployment Guide](https://github.com/kubernetes-sigs/container-object-storage-interface-api/tree/master/docs/deployment-guide.md)
-- [Weekly Meetings](https://github.com/kubernetes-sigs/container-object-storage-interface-api/tree/master/docs/meetings.md)
-- [Roadmap](https://github.com/orgs/kubernetes-sigs/projects/8)
-
+ - [Documentation](https://container-object-storage-interface.github.io/)
+ - [Deployment Guide](https://container-object-storage-interface.github.io/docs/deployment-guide)
+ - [Weekly Meetings](https://container-object-storage-interface.github.io/docs/community/weekly-meetings)
+ - [Roadmap](https://github.com/orgs/kubernetes-sigs/projects/8)
 ## Community, discussion, contribution, and support
-
-Learn how to engage with the Kubernetes community on the [community page](http://kubernetes.io/community/).
 
 You can reach the maintainers of this project at:
 
-- [Slack](https://kubernetes.slack.com/messages/sig-storage-cosi)
-- [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-storage)
-
+ - [#sig-storage-cosi](https://kubernetes.slack.com/messages/sig-storage-cosi) slack channel
+ - [container-object-storage-interface](https://groups.google.com/g/container-object-storage-interface-wg?pli=1) mailing list
 ### Code of conduct
 
 Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](code-of-conduct.md).
