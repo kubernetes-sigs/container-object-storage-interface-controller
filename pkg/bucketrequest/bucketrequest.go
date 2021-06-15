@@ -134,9 +134,6 @@ func (b *bucketRequestListener) provisionBucketRequestOperation(ctx context.Cont
 	}
 
 	controllerutil.AddFinalizer(bucketRequest, finalizer)
-	if _, err := b.bucketClient.ObjectstorageV1alpha1().BucketRequests(bucketRequest.Namespace).Update(ctx, bucketRequest, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
 
 	bucketRequest.Status.BucketName = bucket.Name
 	bucketRequest.Status.BucketAvailable = true

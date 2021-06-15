@@ -150,9 +150,6 @@ func (b *bucketAccessRequestListener) provisionBucketAccess(ctx context.Context,
 	}
 
 	controllerutil.AddFinalizer(bucketAccessRequest, finalizer)
-	if _, err := b.bucketClient.ObjectstorageV1alpha1().BucketAccessRequests(bucketAccessRequest.Namespace).Update(ctx, bucketAccessRequest, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
 
 	bucketAccessRequest.Status.BucketAccessName = bucketaccess.Name
 	bucketAccessRequest.Status.AccessGranted = true
