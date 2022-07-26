@@ -12,7 +12,7 @@ import (
 
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketaccessrequest"
-	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketrequest"
+	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketclaim"
 
 	"k8s.io/klog/v2"
 )
@@ -67,7 +67,7 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctrl.AddBucketRequestListener(bucketrequest.NewBucketRequestListener())
+	ctrl.AddBucketClaimListener(bucketclaim.NewBucketClaimListener())
 	ctrl.AddBucketAccessRequestListener(bucketaccessrequest.NewListener())
 	return ctrl.Run(ctx)
 }
