@@ -3,7 +3,6 @@ package bucketclaim
 import (
 	"context"
 
-	"github.com/google/uuid"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -128,10 +127,10 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		return err
 	}
 
-	controllerutil.AddFinalizer(bucketClaim, finalizer)
+	// controllerutil.AddFinalizer(bucketClaim, finalizer)
 
 	bucketClaim.Status.BucketName = bucket.Name
-	bucketClaim.Status.BucketAvailable = true
+	bucketClaim.Status.BucketAvailable = false
 	_, err = b.BucketClaims(bucketClaim.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		return err
