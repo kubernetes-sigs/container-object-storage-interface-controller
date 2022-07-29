@@ -1,9 +1,14 @@
 # See https://cloud.google.com/cloud-build/docs/build-config
 timeout: 3000s
+substitutions:
+  _IMAGE_NAME: 'gcr.io/k8s-staging-sig-storage/objectstorage-controller'
+  _IMAGE_TAG: 'canary'
 options:
   substitution_option: ALLOW_LOOSE
 steps:
 - name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20200824-5d057db"
   entrypoint: make
-  args:
-  - build
+  args: ['build']
+- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20200824-5d057db"
+  entrypoint: make
+  args: ['push']

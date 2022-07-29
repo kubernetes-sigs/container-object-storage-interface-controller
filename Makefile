@@ -27,5 +27,5 @@ CMDS=controller-manager
 
 include release-tools/build.make
 
-IMAGE_NAME=quay.io/containerobjectstorage/objectstorage-controller
+IMAGE_NAME=gcr.io/k8s-staging-sig-storage/objectstorage-controller
 IMAGE_TAGS=canary
