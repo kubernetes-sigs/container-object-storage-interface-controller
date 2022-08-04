@@ -4,6 +4,10 @@ import (
 	"errors"
 )
 
+const (
+	BucketClaimFinalizer = "cosi.objectstorage.k8s.io/bucketclaim-protection"
+)
+
 var (
 	// Error codes that the central controller will return
 	ErrBucketAlreadyExists        = errors.New("A bucket already existing that matches the bucket request")

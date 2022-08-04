@@ -17,10 +17,6 @@ import (
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
-const (
-	finalizer = "cosi.objectstorage.k8s.io/bucketclaim-protection"
-)
-
 // bucketClaimListener is a resource handler for bucket requests objects
 type bucketClaimListener struct {
 	kubeClient   kubeclientset.Interface
@@ -34,8 +30,8 @@ func NewBucketClaimListener() *bucketClaimListener {
 // Add creates a bucket in response to a bucketClaim
 func (b *bucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
 	klog.V(3).InfoS("Add BucketClaim",
-		"name", bucketClaim.Name,
-		"ns", bucketClaim.Namespace,
+		"name", bucketClaim.ObjectMeta.Name,
+		"ns", bucketClaim.ObjectMeta.Namespace,
 		"bucketClass", bucketClaim.Spec.BucketClassName,
 		"bucketPrefix", bucketClaim.Spec.BucketPrefix,
 	)
@@ -45,27 +41,27 @@ func (b *bucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.Buc
 		switch err {
 		case util.ErrInvalidBucketClass:
 			klog.ErrorS(util.ErrInvalidBucketClass,
-				"bucketClaim", bucketClaim.Name,
-				"ns", bucketClaim.Namespace,
+				"bucketClaim", bucketClaim.ObjectMeta.Name,
+				"ns", bucketClaim.ObjectMeta.Namespace,
 				"bucketClassName", bucketClaim.Spec.BucketClassName)
 		case util.ErrBucketAlreadyExists:
 			klog.V(3).InfoS("Bucket already exists",
-				"bucketClaim", bucketClaim.Name,
-				"ns", bucketClaim.Namespace,
+				"bucketClaim", bucketClaim.ObjectMeta.Name,
+				"ns", bucketClaim.ObjectMeta.Namespace,
 			)
 			return nil
 		default:
 			klog.ErrorS(err,
-				"name", bucketClaim.Name,
-				"ns", bucketClaim.Namespace,
+				"name", bucketClaim.ObjectMeta.Name,
+				"ns", bucketClaim.ObjectMeta.Namespace,
 				"err", err)
 		}
 		return err
 	}
 
 	klog.V(3).InfoS("Add BucketClaim success",
-		"name", bucketClaim.Name,
-		"ns", bucketClaim.Namespace)
+		"name", bucketClaim.ObjectMeta.Name,
+		"ns", bucketClaim.ObjectMeta.Namespace)
 	return nil
 }
 
@@ -74,14 +70,24 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 	klog.V(3).InfoS("Update BucketClaim",
 		"name", old.Name,
 		"ns", old.Namespace)
+
+	if !new.GetDeletionTimestamp().IsZero() {
+		if controllerutil.ContainsFinalizer(bucketClaim, util.BucketClaimFinalizer) {
+			bucketName := bucketClaim.Status.BucketName
+			err := b.Buckets().Delete(ctx, bucketName, metav1.DeleteOptions{})
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
 	klog.V(3).Infof("Delete BucketClaim  %v",
-		"name", bucketClaim.Name,
-		"ns", bucketClaim.Namespace)
+		"name", bucketClaim.ObjectMeta.Name,
+		"ns", bucketClaim.ObjectMeta.Namespace)
 
 	return nil
 }
@@ -93,50 +99,82 @@ func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.
 //    ErrBucketAlreadyExists - BucketClaim already processed
 //    non-nil err - Internal error                                [requeue'd with exponential backoff]
 func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
-	bucketClassName := b.getBucketClass(bucketClaim)
-	bucketClass, err := b.BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
-	if err != nil {
-		klog.ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
-		return util.ErrInvalidBucketClass
-	}
-
 	if bucketClaim.Status.BucketReady {
 		return util.ErrBucketAlreadyExists
 	}
 
-	name = bucketClassName + string(bucketClaim.GetUID())
+	var bucketName string
 
-	// create bucket
-	bucket := &v1alpha1.Bucket{}
-	bucket.Name = name
-	bucket.Status.BucketReady = false
-	bucket.Spec.DriverName = bucketClass.DriverName
-	bucket.Spec.BucketClassName = bucketClassName
-	bucket.Spec.DeletionPolicy = bucketClass.DeletionPolicy
-	bucket.Spec.BucketClaim = &v1.ObjectReference{
-		Name:      bucketClaim.Name,
-		Namespace: bucketClaim.Namespace,
-		UID:       bucketClaim.ObjectMeta.UID,
+	if bucketClaim.Spec.ExistingBucketName != "" {
+		bucketName = bucketClaim.Spec.ExistingBucketName
+		bucket, err = b.Buckets().Get(ctx, bucketName, metav1.GetOptions{})
+		if err != nil {
+			klog.ErrorS(err, "Get Bucket with ExistingBucketName error", "name", existingBucketName)
+			return err
+		}
+
+		bucket.Spec.BucketClaim = &v1.ObjectReference{
+			Name:      bucketClaim.ObjectMeta.Name,
+			Namespace: bucketClaim.ObjectMeta.Namespace,
+			UID:       bucketClaim.ObjectMeta.UID,
+		}
+
+		_, err = b.Buckets().Update(ctx, bucket, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+
+		bucketClaim.Status.BucketName = bucketName
+		bucketClaim.Status.BucketAvailable = true
+	} else {
+		bucketClassName := b.getBucketClass(bucketClaim)
+		bucketClass, err := b.BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
+		if err != nil {
+			klog.ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
+			return util.ErrInvalidBucketClass
+		}
+
+		bucketName = bucketClassName + string(bucketClaim.ObjectMeta.UID)
+
+		// create bucket
+		bucket := &v1alpha1.Bucket{}
+		bucket.Name = bucketName
+		bucket.Spec.DriverName = bucketClass.DriverName
+		bucket.Status.BucketReady = false
+		bucket.Spec.BucketClassName = bucketClassName
+		bucket.Spec.DeletionPolicy = bucketClass.DeletionPolicy
+		bucket.Spec.Parameters = util.CopySS(bucketClass.Parameters)
+
+		bucket.Spec.BucketClaim = &v1.ObjectReference{
+			Name:      bucketClaim.ObjectMeta.Name,
+			Namespace: bucketClaim.ObjectMeta.Namespace,
+			UID:       bucketClaim.ObjectMeta.UID,
+		}
+
+		bucket.Spec.Protocols = *bucketClaim.Spec.Protocol.DeepCopy()
+		bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
+		if err != nil && !errors.IsAlreadyExists(err) {
+			klog.ErrorS(err, "name", bucketName)
+			return err
+		}
+
+		bucketClaim.Status.BucketName = bucketName
+		bucketClaim.Status.BucketAvailable = false
 	}
-	bucket.Spec.Protocols = *bucketClass.Protocol.DeepCopy()
-	bucket.Spec.Parameters = util.CopySS(bucketClass.Parameters)
 
-	bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
-	if err != nil && !errors.IsAlreadyExists(err) {
-		klog.ErrorS(err, "name", bucket.Name)
-		return err
-	}
-
-	// controllerutil.AddFinalizer(bucketClaim, finalizer)
-
-	bucketClaim.Status.BucketName = bucket.Name
-	bucketClaim.Status.BucketAvailable = false
-	_, err = b.BucketClaims(bucketClaim.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
+	_, err = b.BucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 
-	klog.Infof("Finished creating Bucket %v", bucket.Name)
+	// Add the finalizers so that bucketClaim is deleted
+	// only after the associated bucket is deleted.
+	controllerutil.AddFinalizer(bucketClaim, util.BucketClaimFinalizer)
+	_, err = b.BucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	klog.Infof("Finished creating Bucket %v", bucketName)
 	return nil
 }
 

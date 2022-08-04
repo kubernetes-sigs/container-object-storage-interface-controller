@@ -3,7 +3,6 @@ package util
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"golang.org/x/time/rate"
 	"os"
@@ -228,65 +227,6 @@ func DeleteObjects(ctx context.Context, client bucketclientset.Interface, objs .
 	}
 }
 
-// CreateBucketRequest creates a bucket request object or return an existing bucket request object
-// This is used by bucket request unit tests
-func CreateBucketRequest(ctx context.Context, client bucketclientset.Interface, br *types.BucketRequest) (*types.BucketRequest, error) {
-	br, err := client.ObjectstorageV1alpha1().BucketRequests(br.Namespace).Create(ctx, br, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		br, err = client.ObjectstorageV1alpha1().BucketRequests(br.Namespace).Get(ctx, br.Name, metav1.GetOptions{})
-	}
-	return br, err
-}
-
-// CreateBucketAccessRequest creates a bucket access request object or return an existing bucket access request object
-// This is used by bucket access request unit tests
-func CreateBucketAccessRequest(ctx context.Context, client bucketclientset.Interface, bar *types.BucketAccessRequest) (*types.BucketAccessRequest, error) {
-	bar, err := client.ObjectstorageV1alpha1().BucketAccessRequests(bar.Namespace).Create(ctx, bar, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		bar, err = client.ObjectstorageV1alpha1().BucketAccessRequests(bar.Namespace).Get(ctx, bar.Name, metav1.GetOptions{})
-	}
-	return bar, err
-}
-
-// CreateBucketClass creates a bucket class object or return an existing bucket class object
-// This is used by bucket request unit tests
-func CreateBucketClass(ctx context.Context, client bucketclientset.Interface, bc *types.BucketClass) (*types.BucketClass, error) {
-	bc, err := client.ObjectstorageV1alpha1().BucketClasses().Create(ctx, bc, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		bc, err = client.ObjectstorageV1alpha1().BucketClasses().Get(ctx, bc.Name, metav1.GetOptions{})
-	}
-	return bc, err
-}
-
-// CreateBucketAccessClass creates a bucket access class object or return an existing bucket access class object
-// This is used by bucket request unit tests
-func CreateBucketAccessClass(ctx context.Context, client bucketclientset.Interface, bac *types.BucketAccessClass) (*types.BucketAccessClass, error) {
-	bac, err := client.ObjectstorageV1alpha1().BucketAccessClasses().Create(ctx, bac, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		bac, err = client.ObjectstorageV1alpha1().BucketAccessClasses().Get(ctx, bac.Name, metav1.GetOptions{})
-	}
-	return bac, err
-}
-
-// CreateBucket creates a bucket object or return an existing bucket object
-// This is used by bucket request unit tests
-func CreateBucket(ctx context.Context, client bucketclientset.Interface, b *types.Bucket) (*types.Bucket, error) {
-	b, err := client.ObjectstorageV1alpha1().Buckets().Create(ctx, b, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		b, err = client.ObjectstorageV1alpha1().Buckets().Get(ctx, b.Name, metav1.GetOptions{})
-	}
-	return b, err
-}
-
-// CreateBucketAccess creates a bucket access object or return an existing bucket access object
-// This is used by bucket access request unit tests
-func CreateBucketAccess(ctx context.Context, client bucketclientset.Interface, ba *types.BucketAccess) (*types.BucketAccess, error) {
-	ba, err := client.ObjectstorageV1alpha1().BucketAccesses().Create(ctx, ba, metav1.CreateOptions{})
-	if (err != nil) && apierrors.IsAlreadyExists(err) {
-		ba, err = client.ObjectstorageV1alpha1().BucketAccesses().Get(ctx, ba.Name, metav1.GetOptions{})
-	}
-	return ba, err
-}
 
 // getCRDClient returns CRD interface for managing CRD objects programmatically
 // Used by unit tests and functional tests
