@@ -59,7 +59,7 @@ var bucketClaim2 = types.BucketClaim{
 	},
 	Spec: types.BucketClaimSpec{
 		BucketClassName: "classgold",
-		Protocols: []types.Protocol{types.ProtocolAzure, types.GCS},
+		Protocols: []types.Protocol{types.ProtocolAzure, types.ProtocolGCP},
 	},
 }
 
