@@ -1,4 +1,4 @@
-package bucketrequest
+package bucketclaim
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
-	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset/fake"
+	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
 
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
@@ -26,46 +26,40 @@ var goldClass = types.BucketClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "classgold",
 	},
-	AllowedNamespaces: []string{"default", "cosins"},
-	Parameters:        classGoldParameters,
-	Protocol: types.Protocol{
-		S3: &types.S3Protocol{
-			Region:           "us-east-1",
-			SignatureVersion: "S3V4",
-		},
-	},
-	IsDefaultBucketClass: false,
+	DriverName:     "sample.cosi.driver",
+	Parameters:     classGoldParameters,
+	DeletionPolicy: types.DeletionPolicyDelete,
 }
 
-var bucketRequest1 = types.BucketRequest{
+var bucketClaim1 = types.BucketClaim{
 	TypeMeta: metav1.TypeMeta{
 		APIVersion: "objectstorage.k8s.io/v1alpha1",
-		Kind:       "BucketRequest",
+		Kind:       "BucketClaim",
 	},
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "bucketrequest1",
+		Name:      "bucketclaim1",
 		Namespace: "default",
 		UID:       "12345-67890",
 	},
-	Spec: types.BucketRequestSpec{
-		BucketPrefix:    "cosi",
+	Spec: types.BucketClaimSpec{
 		BucketClassName: "classgold",
+		Protocols:       []types.Protocol{types.ProtocolAzure, types.ProtocolS3},
 	},
 }
 
-var bucketRequest2 = types.BucketRequest{
+var bucketClaim2 = types.BucketClaim{
 	TypeMeta: metav1.TypeMeta{
 		APIVersion: "objectstorage.k8s.io/v1alpha1",
-		Kind:       "BucketRequest",
+		Kind:       "BucketClaim",
 	},
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "bucketrequest2",
+		Name:      "bucketclaim2",
 		Namespace: "default",
 		UID:       "abcde-fghijk",
 	},
-	Spec: types.BucketRequestSpec{
-		BucketPrefix:    "cosi",
+	Spec: types.BucketClaimSpec{
 		BucketClassName: "classgold",
+		Protocols:       []types.Protocol{types.ProtocolAzure, types.ProtocolGCP},
 	},
 }
 
@@ -91,7 +85,7 @@ func runCreateBucket(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewBucketRequestListener()
+	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 
@@ -100,30 +94,30 @@ func runCreateBucket(t *testing.T, name string) {
 		t.Fatalf("Error occurred when creating BucketClass: %v", err)
 	}
 
-	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	bucketClaim, err := util.CreateBucketClaim(ctx, client, &bucketClaim1)
 	if err != nil {
-		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+		t.Fatalf("Error occurred when creating BucketClaim: %v", err)
 	}
 
-	listener.Add(ctx, bucketrequest)
+	listener.Add(ctx, bucketClaim)
 
 	bucketList := util.GetBuckets(ctx, client, 1)
-	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketclass, bucketList.Items)
+	defer util.DeleteObjects(ctx, client, *bucketClaim, *bucketclass, bucketList.Items)
 
 	if len(bucketList.Items) != 1 {
 		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
 	}
 	bucket := bucketList.Items[0]
 
-	bucketrequest, err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest.Namespace).Get(ctx, bucketrequest.Name, metav1.GetOptions{})
+	bucketClaim, err = client.ObjectstorageV1alpha1().BucketClaims(bucketClaim.Namespace).Get(ctx, bucketClaim.Name, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+		t.Fatalf("Error occurred when reading BucketClaim: %v", err)
 	}
 
-	if util.ValidateBucket(bucket, *bucketrequest, *bucketclass) {
+	if util.ValidateBucket(bucket, *bucketClaim, *bucketclass) {
 		return
 	} else {
-		t.Fatalf("Failed to compare the resulting Bucket with the BucketRequest %v and BucketClass %v", bucketrequest, bucketclass)
+		t.Fatalf("Failed to compare the resulting Bucket with the BucketClaim %v and BucketClass %v", bucketClaim, bucketclass)
 	}
 }
 
@@ -134,7 +128,7 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewBucketRequestListener()
+	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 
@@ -143,41 +137,41 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 		t.Fatalf("Error occurred when creating BucketClass: %v", err)
 	}
 
-	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	bucketClaim, err := util.CreateBucketClaim(ctx, client, &bucketClaim1)
 	if err != nil {
-		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+		t.Fatalf("Error occurred when creating BucketClaim: %v", err)
 	}
 
-	bucketrequest2, err := util.CreateBucketRequest(ctx, client, &bucketRequest2)
+	bucketClaim2, err := util.CreateBucketClaim(ctx, client, &bucketClaim2)
 	if err != nil {
-		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+		t.Fatalf("Error occurred when creating BucketClaim: %v", err)
 	}
 
-	listener.Add(ctx, bucketrequest)
-	listener.Add(ctx, bucketrequest2)
+	listener.Add(ctx, bucketClaim)
+	listener.Add(ctx, bucketClaim2)
 
 	bucketList := util.GetBuckets(ctx, client, 2)
-	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketrequest2, *bucketclass, bucketList.Items)
+	defer util.DeleteObjects(ctx, client, *bucketClaim, *bucketClaim2, *bucketclass, bucketList.Items)
 	if len(bucketList.Items) != 2 {
 		t.Fatalf("Expecting two Buckets created but found %v", len(bucketList.Items))
 	}
 	bucket := bucketList.Items[0]
 	bucket2 := bucketList.Items[1]
 
-	bucketrequest, err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest.Namespace).Get(ctx, bucketrequest.Name, metav1.GetOptions{})
+	bucketClaim, err = client.ObjectstorageV1alpha1().BucketClaims(bucketClaim.Namespace).Get(ctx, bucketClaim.Name, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+		t.Fatalf("Error occurred when reading BucketClaim: %v", err)
 	}
-	bucketrequest2, err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest2.Namespace).Get(ctx, bucketrequest2.Name, metav1.GetOptions{})
+	bucketClaim2, err = client.ObjectstorageV1alpha1().BucketClaims(bucketClaim2.Namespace).Get(ctx, bucketClaim2.Name, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+		t.Fatalf("Error occurred when reading BucketClaim: %v", err)
 	}
 
-	if (util.ValidateBucket(bucket, *bucketrequest, *bucketclass) && util.ValidateBucket(bucket2, *bucketrequest2, *bucketclass)) ||
-		(util.ValidateBucket(bucket2, *bucketrequest, *bucketclass) && util.ValidateBucket(bucket, *bucketrequest2, *bucketclass)) {
+	if (util.ValidateBucket(bucket, *bucketClaim, *bucketclass) && util.ValidateBucket(bucket2, *bucketClaim2, *bucketclass)) ||
+		(util.ValidateBucket(bucket2, *bucketClaim, *bucketclass) && util.ValidateBucket(bucket, *bucketClaim2, *bucketclass)) {
 		return
 	} else {
-		t.Fatalf("Failed to compare the resulting Bucket with the BucketRequest %v and BucketClass %v", bucketrequest, bucketclass)
+		t.Fatalf("Failed to compare the resulting Bucket with the BucketClaim %v and BucketClass %v", bucketClaim, bucketclass)
 	}
 }
 
@@ -188,7 +182,7 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
 
-	listener := NewBucketRequestListener()
+	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
 
@@ -197,34 +191,34 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 		t.Fatalf("Error occurred when creating BucketClass: %v", err)
 	}
 
-	bucketrequest, err := util.CreateBucketRequest(ctx, client, &bucketRequest1)
+	bucketClaim, err := util.CreateBucketClaim(ctx, client, &bucketClaim1)
 	if err != nil {
-		t.Fatalf("Error occurred when creating BucketRequest: %v", err)
+		t.Fatalf("Error occurred when creating BucketClaim: %v", err)
 	}
 
-	listener.Add(ctx, bucketrequest)
+	listener.Add(ctx, bucketClaim)
 
 	bucketList := util.GetBuckets(ctx, client, 1)
-	defer util.DeleteObjects(ctx, client, *bucketrequest, *bucketclass, bucketList.Items)
+	defer util.DeleteObjects(ctx, client, *bucketClaim, *bucketclass, bucketList.Items)
 
 	if len(bucketList.Items) != 1 {
 		t.Errorf("Expecting a single Bucket created but found %v", len(bucketList.Items))
 	}
 	bucket := bucketList.Items[0]
 
-	bucketrequest, err = client.ObjectstorageV1alpha1().BucketRequests(bucketrequest.Namespace).Get(ctx, bucketrequest.Name, metav1.GetOptions{})
+	bucketClaim, err = client.ObjectstorageV1alpha1().BucketClaims(bucketClaim.Namespace).Get(ctx, bucketClaim.Name, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("Error occurred when reading BucketRequest: %v", err)
+		t.Fatalf("Error occurred when reading BucketClaim: %v", err)
 	}
 
-	if util.ValidateBucket(bucket, *bucketrequest, *bucketclass) {
+	if util.ValidateBucket(bucket, *bucketClaim, *bucketclass) {
 		return
 	} else {
-		t.Fatalf("Failed to compare the resulting Bucket with the BucketRequest %v and BucketClass %v", bucketrequest, bucketclass)
+		t.Fatalf("Failed to compare the resulting Bucket with the BucketClaim %v and BucketClass %v", bucketClaim, bucketclass)
 		// call the add directly the second time
 	}
 
-	listener.Add(ctx, bucketrequest)
+	listener.Add(ctx, bucketClaim)
 
 	bucketList = util.GetBuckets(ctx, client, 1)
 	if len(bucketList.Items) != 1 {
