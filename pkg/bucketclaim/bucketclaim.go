@@ -10,9 +10,9 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
-	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset"
-	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/clientset/typed/objectstorage.k8s.io/v1alpha1"
+	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned"
+	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/typed/objectstorage/v1alpha1"
 
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
@@ -33,7 +33,6 @@ func (b *bucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.Buc
 		"name", bucketClaim.ObjectMeta.Name,
 		"ns", bucketClaim.ObjectMeta.Namespace,
 		"bucketClass", bucketClaim.Spec.BucketClassName,
-		"bucketPrefix", bucketClaim.Spec.BucketPrefix,
 	)
 
 	err := b.provisionBucketClaimOperation(ctx, bucketClaim)
@@ -71,10 +70,12 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 		"name", old.Name,
 		"ns", old.Namespace)
 
+	bucketClaim := new.DeepCopy()
+
 	if !new.GetDeletionTimestamp().IsZero() {
 		if controllerutil.ContainsFinalizer(bucketClaim, util.BucketClaimFinalizer) {
 			bucketName := bucketClaim.Status.BucketName
-			err := b.Buckets().Delete(ctx, bucketName, metav1.DeleteOptions{})
+			err := b.buckets().Delete(ctx, bucketName, metav1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
@@ -104,12 +105,13 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	}
 
 	var bucketName string
+	var err error
 
 	if bucketClaim.Spec.ExistingBucketName != "" {
 		bucketName = bucketClaim.Spec.ExistingBucketName
-		bucket, err = b.Buckets().Get(ctx, bucketName, metav1.GetOptions{})
+		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if err != nil {
-			klog.ErrorS(err, "Get Bucket with ExistingBucketName error", "name", existingBucketName)
+			klog.ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
 			return err
 		}
 
@@ -119,16 +121,20 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 			UID:       bucketClaim.ObjectMeta.UID,
 		}
 
-		_, err = b.Buckets().Update(ctx, bucket, metav1.UpdateOptions{})
+		_, err = b.buckets().Update(ctx, bucket, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
 
 		bucketClaim.Status.BucketName = bucketName
-		bucketClaim.Status.BucketAvailable = true
+		bucketClaim.Status.BucketReady = true
 	} else {
-		bucketClassName := b.getBucketClass(bucketClaim)
-		bucketClass, err := b.BucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
+		bucketClassName := bucketClaim.Spec.BucketClassName
+		if bucketClassName == "" {
+			return util.ErrInvalidBucketClass
+		}
+
+		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if err != nil {
 			klog.ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
 			return util.ErrInvalidBucketClass
@@ -151,18 +157,21 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 			UID:       bucketClaim.ObjectMeta.UID,
 		}
 
-		bucket.Spec.Protocols = *bucketClaim.Spec.Protocol.DeepCopy()
-		bucket, err = b.Buckets().Create(ctx, bucket, metav1.CreateOptions{})
+		protocolCopy := make([]v1alpha1.Protocol, len(bucketClaim.Spec.Protocols))
+		copy(protocolCopy, bucketClaim.Spec.Protocols)
+
+		bucket.Spec.Protocols = protocolCopy
+		bucket, err = b.buckets().Create(ctx, bucket, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
 			klog.ErrorS(err, "name", bucketName)
 			return err
 		}
 
 		bucketClaim.Status.BucketName = bucketName
-		bucketClaim.Status.BucketAvailable = false
+		bucketClaim.Status.BucketReady = false
 	}
 
-	_, err = b.BucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
+	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -170,28 +179,12 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	// Add the finalizers so that bucketClaim is deleted
 	// only after the associated bucket is deleted.
 	controllerutil.AddFinalizer(bucketClaim, util.BucketClaimFinalizer)
-	_, err = b.BucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
+	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 	klog.Infof("Finished creating Bucket %v", bucketName)
 	return nil
-}
-
-// getBucketClass returns BucketClassName. If no bucket class was in the request it returns empty
-// TODO this methods can be more sophisticate to address bucketClass overrides using annotations just like SC.
-func (b *bucketClaimListener) getBucketClass(bucketClaim *v1alpha1.BucketClaim) string {
-	if bucketClaim.Spec.BucketClassName != "" {
-		return bucketClaim.Spec.BucketClassName
-	}
-
-	return ""
-}
-
-// cloneTheBucket clones a bucket to a different namespace when a BR is for brownfield.
-func (b *bucketClaimListener) cloneTheBucket(bucketClaim *v1alpha1.BucketClaim) error {
-	klog.InfoS("Cloning Bucket", "name", bucketClaim.Status.BucketName)
-	return util.ErrNotImplemented
 }
 
 func (b *bucketClaimListener) InitializeKubeClient(k kubeclientset.Interface) {
@@ -202,21 +195,21 @@ func (b *bucketClaimListener) InitializeBucketClient(bc bucketclientset.Interfac
 	b.bucketClient = bc
 }
 
-func (b *bucketClaimListener) Buckets() objectstoragev1alpha1.BucketInterface {
+func (b *bucketClaimListener) buckets() objectstoragev1alpha1.BucketInterface {
 	if b.bucketClient != nil {
 		return b.bucketClient.ObjectstorageV1alpha1().Buckets()
 	}
 	panic("uninitialized listener")
 }
 
-func (b *bucketClaimListener) BucketClasses() objectstoragev1alpha1.BucketClassInterface {
+func (b *bucketClaimListener) bucketClasses() objectstoragev1alpha1.BucketClassInterface {
 	if b.bucketClient != nil {
 		return b.bucketClient.ObjectstorageV1alpha1().BucketClasses()
 	}
 	panic("uninitialized listener")
 }
 
-func (b *bucketClaimListener) BucketClaims(namespace string) objectstoragev1alpha1.BucketClaimInterface {
+func (b *bucketClaimListener) bucketClaims(namespace string) objectstoragev1alpha1.BucketClaimInterface {
 	if b.bucketClient != nil {
 		return b.bucketClient.ObjectstorageV1alpha1().BucketClaims(namespace)
 	}

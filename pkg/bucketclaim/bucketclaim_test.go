@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage.k8s.io/v1alpha1"
-	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/clientset/fake"
+	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
 
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
@@ -26,15 +26,9 @@ var goldClass = types.BucketClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "classgold",
 	},
-	AllowedNamespaces: []string{"default", "cosins"},
-	Parameters:        classGoldParameters,
-	Protocol: types.Protocol{
-		S3: &types.S3Protocol{
-			Region:           "us-east-1",
-			SignatureVersion: "S3V4",
-		},
-	},
-	IsDefaultBucketClass: false,
+	DriverName: "sample.cosi.driver",
+	Parameters: classGoldParameters,
+	DeletionPolicy: types.DeletionPolicyDelete,
 }
 
 var bucketClaim1 = types.BucketClaim{
@@ -48,8 +42,8 @@ var bucketClaim1 = types.BucketClaim{
 		UID:       "12345-67890",
 	},
 	Spec: types.BucketClaimSpec{
-		BucketPrefix:    "cosi",
 		BucketClassName: "classgold",
+		Protocols: []types.Protocol{types.ProtocolAzure, types.ProtocolS3},
 	},
 }
 
@@ -64,8 +58,8 @@ var bucketClaim2 = types.BucketClaim{
 		UID:       "abcde-fghijk",
 	},
 	Spec: types.BucketClaimSpec{
-		BucketPrefix:    "cosi",
 		BucketClassName: "classgold",
+		Protocols: []types.Protocol{types.ProtocolAzure, types.GCS},
 	},
 }
 
