@@ -26,8 +26,8 @@ var goldClass = types.BucketClass{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "classgold",
 	},
-	DriverName: "sample.cosi.driver",
-	Parameters: classGoldParameters,
+	DriverName:     "sample.cosi.driver",
+	Parameters:     classGoldParameters,
 	DeletionPolicy: types.DeletionPolicyDelete,
 }
 
@@ -43,7 +43,7 @@ var bucketClaim1 = types.BucketClaim{
 	},
 	Spec: types.BucketClaimSpec{
 		BucketClassName: "classgold",
-		Protocols: []types.Protocol{types.ProtocolAzure, types.ProtocolS3},
+		Protocols:       []types.Protocol{types.ProtocolAzure, types.ProtocolS3},
 	},
 }
 
@@ -59,7 +59,7 @@ var bucketClaim2 = types.BucketClaim{
 	},
 	Spec: types.BucketClaimSpec{
 		BucketClassName: "classgold",
-		Protocols: []types.Protocol{types.ProtocolAzure, types.ProtocolGCP},
+		Protocols:       []types.Protocol{types.ProtocolAzure, types.ProtocolGCP},
 	},
 }
 
