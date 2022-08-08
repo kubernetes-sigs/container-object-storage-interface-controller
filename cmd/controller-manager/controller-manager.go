@@ -11,8 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	bucketcontroller "sigs.k8s.io/container-object-storage-interface-api/controller"
-	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketaccessrequest"
-	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketrequest"
+	"sigs.k8s.io/container-object-storage-interface-controller/pkg/bucketclaim"
 
 	"k8s.io/klog/v2"
 )
@@ -67,7 +66,6 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctrl.AddBucketRequestListener(bucketrequest.NewBucketRequestListener())
-	ctrl.AddBucketAccessRequestListener(bucketaccessrequest.NewListener())
+	ctrl.AddBucketClaimListener(bucketclaim.NewBucketClaimListener())
 	return ctrl.Run(ctx)
 }
