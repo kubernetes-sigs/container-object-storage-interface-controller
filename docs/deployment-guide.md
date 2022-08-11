@@ -1,4 +1,4 @@
-# Deployment guide for Container Object Storage Interface (COSI) Controller On Kubernetes
+# Deployment guide
 
 This document describes steps for Kubernetes administrators to setup Container Object Storage Interface Controller (COSI) Controller onto a Kubernetes cluster.
 
