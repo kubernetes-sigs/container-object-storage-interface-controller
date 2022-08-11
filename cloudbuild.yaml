@@ -6,9 +6,9 @@ substitutions:
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20200824-5d057db"
+- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20220617-174ad91c3a"
   entrypoint: make
   args: ['build']
-- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20200824-5d057db"
+- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20220617-174ad91c3a"
   entrypoint: make
   args: ['push']
