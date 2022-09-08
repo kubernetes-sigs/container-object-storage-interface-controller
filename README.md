@@ -15,13 +15,12 @@ and generates the associated CRDs:
 
 Before diving into the code of this repo, we suggest that you familiarize yourself with:
 
-- The Spec of CRDs in [objectstorage.k8s.io/v1alpha1/types.go](https://github.com/kubernetes-sigs/container-object-storage-interface-api/blob/master/apis/objectstorage.k8s.io/v1alpha1/types.go)
+- The Spec of CRDs in [objectstorage.k8s.io/v1alpha1/types.go](https://github.com/kubernetes-sigs/container-object-storage-interface-api/blob/master/apis/objectstorage/v1alpha1/types.go)
 - The Spec of the COSI objects [sigs.k8s.io/container-object-storage-interface-spec](https://github.com/kubernetes-sigs/container-object-storage-interface-spec)
 
 A good starting point towards understanding the functionality of this repo would be to study the tests:
 
-- [BucketRequest Test](./pkg/bucketrequest/bucketrequest_test.go)
-- [BucketAccessRequest Test](./pkg/bucketaccessrequest/bucketaccessrequest_test.go)
+- [BucketClaim Test](./pkg/bucketclaim/bucketclaim_test.go)
 
 ### Build and Test
 
