@@ -99,7 +99,8 @@ func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.
 //    ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
 //    ErrBucketAlreadyExists - BucketClaim already processed
 //    non-nil err - Internal error                                [requeue'd with exponential backoff]
-func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
+func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context, inputBucketClaim *v1alpha1.BucketClaim) error {
+	bucketClaim := inputBucketClaim.DeepCopy()
 	if bucketClaim.Status.BucketReady {
 		return util.ErrBucketAlreadyExists
 	}
