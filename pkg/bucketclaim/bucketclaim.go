@@ -39,7 +39,7 @@ func (b *bucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.Buc
 	if err != nil {
 		switch err {
 		case util.ErrInvalidBucketClass:
-			klog.ErrorS(util.ErrInvalidBucketClass,
+			klog.V(3).ErrorS(util.ErrInvalidBucketClass,
 				"bucketClaim", bucketClaim.ObjectMeta.Name,
 				"ns", bucketClaim.ObjectMeta.Namespace,
 				"bucketClassName", bucketClaim.Spec.BucketClassName)
@@ -50,7 +50,7 @@ func (b *bucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.Buc
 			)
 			return nil
 		default:
-			klog.ErrorS(err,
+			klog.V(3).ErrorS(err,
 				"name", bucketClaim.ObjectMeta.Name,
 				"ns", bucketClaim.ObjectMeta.Namespace,
 				"err", err)
@@ -77,10 +77,19 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 			bucketName := bucketClaim.Status.BucketName
 			err := b.buckets().Delete(ctx, bucketName, metav1.DeleteOptions{})
 			if err != nil {
+				klog.V(3).ErrorS(err, "Error deleting bucket",
+					"bucket", bucketName,
+					"bucketClaim", bucketClaim.ObjectMeta.Name)
 				return err
 			}
+
+			klog.V(5).Infof("Successfully deleted bucket: %s from bucketClaim: %s", bucketName, bucketClaim.ObjectMeta.Name)
 		}
 	}
+
+	klog.V(3).InfoS("Update BucketClaim success",
+		"name", bucketClaim.ObjectMeta.Name,
+		"ns", bucketClaim.ObjectMeta.Namespace)
 	return nil
 }
 
@@ -112,7 +121,7 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketName = bucketClaim.Spec.ExistingBucketName
 		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if err != nil {
-			klog.ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
+			klog.V(3).ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
 			return err
 		}
 
@@ -124,6 +133,9 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 
 		_, err = b.buckets().Update(ctx, bucket, metav1.UpdateOptions{})
 		if err != nil {
+			klog.V(3).ErrorS(err, "Error updating existing bucket",
+				"bucket", bucket.ObjectMeta.Name,
+				"bucketClaim", bucketClaim.ObjectMeta.Name)
 			return err
 		}
 
@@ -137,7 +149,7 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 
 		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if err != nil {
-			klog.ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
+			klog.V(3).ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
 			return util.ErrInvalidBucketClass
 		}
 
@@ -164,7 +176,9 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucket.Spec.Protocols = protocolCopy
 		bucket, err = b.buckets().Create(ctx, bucket, metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
-			klog.ErrorS(err, "name", bucketName)
+			klog.V(3).ErrorS(err, "Error creationg bucket",
+				"bucket", bucketName,
+				"bucketClaim", bucketClaim.ObjectMeta.Name)
 			return err
 		}
 
@@ -176,7 +190,7 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	// operation doesn't happen on an outdated version of the bucketClaim.
 	bucketClaim, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update status of BucketClaim", "name", bucketClaim.ObjectMeta.Name)
+		klog.V(3).ErrorS(err, "Failed to update status of BucketClaim", "name", bucketClaim.ObjectMeta.Name)
 		return err
 	}
 
@@ -185,11 +199,11 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	controllerutil.AddFinalizer(bucketClaim, util.BucketClaimFinalizer)
 	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to update BucketClaim", "name", bucketClaim.ObjectMeta.Name)
+		klog.V(3).ErrorS(err, "Failed to add finalizer BucketClaim", "name", bucketClaim.ObjectMeta.Name)
 		return err
 	}
 
-	klog.Infof("Finished creating Bucket %v", bucketName)
+	klog.V(3).Infof("Finished creating Bucket %v", bucketName)
 	return nil
 }
 
