@@ -86,7 +86,7 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
-	klog.V(3).Infof("Delete BucketClaim  %v",
+	klog.V(3).Infof("Delete BucketClaim",
 		"name", bucketClaim.ObjectMeta.Name,
 		"ns", bucketClaim.ObjectMeta.Namespace)
 
@@ -172,8 +172,11 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketClaim.Status.BucketReady = false
 	}
 
-	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
+	// Fetching the updated bucketClaim again, so that the update
+	// operation doesn't happen on an outdated version of the bucketClaim.
+	bucketClaim, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
+		klog.ErrorS(err, "Failed to update status of BucketClaim", "name", bucketClaim.ObjectMeta.Name)
 		return err
 	}
 
@@ -182,8 +185,10 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	controllerutil.AddFinalizer(bucketClaim, util.BucketClaimFinalizer)
 	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
+		klog.ErrorS(err, "Failed to update BucketClaim", "name", bucketClaim.ObjectMeta.Name)
 		return err
 	}
+
 	klog.Infof("Finished creating Bucket %v", bucketName)
 	return nil
 }
