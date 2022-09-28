@@ -131,6 +131,10 @@ func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 			UID:       bucketClaim.ObjectMeta.UID,
 		}
 
+		protocolCopy := make([]v1alpha1.Protocol, len(bucketClaim.Spec.Protocols))
+		copy(protocolCopy, bucketClaim.Spec.Protocols)
+
+		bucket.Spec.Protocols = protocolCopy
 		_, err = b.buckets().Update(ctx, bucket, metav1.UpdateOptions{})
 		if err != nil {
 			klog.V(3).ErrorS(err, "Error updating existing bucket",
