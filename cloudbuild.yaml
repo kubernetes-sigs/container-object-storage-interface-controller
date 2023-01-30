@@ -7,15 +7,15 @@ substitutions:
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20220617-174ad91c3a"
+- name: "gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20221214-1b4dd4d69a"
   entrypoint: make
   args: ['build']
-  env: 
+  env:
   - GIT_TAG=${_GIT_TAG}
   - PULL_BASE_REF=${_PULL_BASE_REF}
-- name: "gcr.io/k8s-testimages/gcb-docker-gcloud:v20220617-174ad91c3a"
+- name: "gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20221214-1b4dd4d69a"
   entrypoint: make
   args: ['push']
-  env: 
+  env:
   - GIT_TAG=${_GIT_TAG}
   - PULL_BASE_REF=${_PULL_BASE_REF}
