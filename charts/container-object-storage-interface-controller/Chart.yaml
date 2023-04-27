@@ -1,0 +1,9 @@
+apiVersion: v2
+name: container-object-storage-interface-controller
+description: A Helm chart for container object storage interface controller
+sources:
+  - http://github.com/kubernetes-sigs/container-object-storage-interface-controller
+icon: https://upload.wikimedia.org/wikipedia/commons/6/67/Kubernetes_logo.svg
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
