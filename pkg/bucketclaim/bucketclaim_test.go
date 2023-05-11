@@ -6,6 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/record"
 
 	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
@@ -84,10 +85,12 @@ func runCreateBucket(t *testing.T, name string) {
 
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
@@ -127,10 +130,12 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
@@ -181,10 +186,12 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 
 	client := bucketclientset.NewSimpleClientset()
 	kubeClient := fake.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
