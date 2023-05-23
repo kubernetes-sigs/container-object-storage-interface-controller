@@ -95,7 +95,7 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
-	klog.V(3).Infof("Delete BucketClaim",
+	klog.V(3).Info("Delete BucketClaim",
 		"name", bucketClaim.ObjectMeta.Name,
 		"ns", bucketClaim.ObjectMeta.Namespace)
 
