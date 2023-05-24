@@ -95,7 +95,7 @@ func (b *bucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 
 // Delete processes a bucket for which bucket request is deleted
 func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.BucketClaim) error {
-	klog.V(3).Infof("Delete BucketClaim",
+	klog.V(3).Info("Delete BucketClaim",
 		"name", bucketClaim.ObjectMeta.Name,
 		"ns", bucketClaim.ObjectMeta.Namespace)
 
@@ -104,10 +104,11 @@ func (b *bucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.
 
 // provisionBucketClaimOperation attempts to provision a bucket for a given bucketClaim.
 // Return values
-//    nil - BucketClaim successfully processed
-//    ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
-//    ErrBucketAlreadyExists - BucketClaim already processed
-//    non-nil err - Internal error                                [requeue'd with exponential backoff]
+//
+//	nil - BucketClaim successfully processed
+//	ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
+//	ErrBucketAlreadyExists - BucketClaim already processed
+//	non-nil err - Internal error                                [requeue'd with exponential backoff]
 func (b *bucketClaimListener) provisionBucketClaimOperation(ctx context.Context, inputBucketClaim *v1alpha1.BucketClaim) error {
 	bucketClaim := inputBucketClaim.DeepCopy()
 	if bucketClaim.Status.BucketReady {
