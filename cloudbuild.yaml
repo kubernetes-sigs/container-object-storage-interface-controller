@@ -21,8 +21,8 @@ steps:
     args: ['buildx']
     env:
       - BUILDX_PLATFORMS='linux/amd64,linux/arm64'
-      - IMAGE_TAG='gcr.io/$PROJECT_ID/objectstorage-controller:${_GIT_TAG}'
-      - BUILD_ARGS='--tag "gcr.io/$PROJECT_ID/objectstorage-controller:latest"'
+      - IMAGE_TAG='gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_GIT_TAG}'
+      - BUILD_ARGS='--tag "gcr.io/k8s-staging-sig-storage/objectstorage-controller:latest"'
 images:
-  - gcr.io/$PROJECT_ID/objectstorage-controller:${_GIT_TAG}
-  - gcr.io/$PROJECT_ID/objectstorage-controller:latest
+  - gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_GIT_TAG}
+  - gcr.io/k8s-staging-sig-storage/objectstorage-controller:latest
