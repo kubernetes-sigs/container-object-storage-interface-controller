@@ -17,10 +17,7 @@ PLATFORM ?= linux/$(GOARCH)
 BUILDX_PLATFORMS ?= linux/amd64,linux/arm64
 
 ## Image tag for all builds
-IMAGE_TAG ?= local/cosi-controller:latest
-
-## Add additional build args if desired
-BUILD_ARGS ?=
+IMAGE_TAG ?= cosi-controller:latest
 
 ##
 ## === TARGETS === #
@@ -30,11 +27,6 @@ BUILD_ARGS ?=
 build:
 	# $(DOCKER) build --platform $(PLATFORM) --tag $(IMAGE_TAG) .
 	true # return true temporarily to allow prow to succeed
-
-.PHONY: buildx
-## Build cross-platform image for release
-buildx:
-	$(DOCKER) buildx build --platform $(BUILDX_PLATFORMS) $(BUILD_ARGS) --tag $(IMAGE_TAG) .
 
 .PHONY: test
 ## Test packages
