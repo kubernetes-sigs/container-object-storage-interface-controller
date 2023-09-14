@@ -28,6 +28,7 @@ steps:
     args:
       - buildx
       - build
+      - --load # https://docs.docker.com/build/drivers/docker-container/#loading-to-local-image-store
       - --platform=${_PLATFORMS}
       - --tag=gcr.io/k8s-staging-sig-storage/${_IMAGE}:${_GIT_TAG}
       # using _PULL_BASE_REF as a tag will often just build and overwrite the same 'master' tag,
