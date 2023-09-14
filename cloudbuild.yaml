@@ -1,3 +1,4 @@
+# K8s infra build example: https://github.com/kubernetes/test-infra/blob/master/config/jobs/image-pushing/README.md
 # GCloud build docs: https://cloud.google.com/cloud-build/docs/build-config
 # Builds go to https://console.cloud.google.com/gcr/images/k8s-staging-test-infra/global/
 # Build logs in https://testgrid.k8s.io/sig-storage-image-build
@@ -6,29 +7,36 @@ options:
   substitution_option: 'ALLOW_LOOSE'
   machineType: 'E2_HIGHCPU_8'
 substitutions:
-  # GCloud provides som built-in substitution vars:
-  #   https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values
   # K8s provides custom substitutions _GIT_TAG and _PULL_BASE_REF:
   #   https://github.com/kubernetes/test-infra/blob/master/config/jobs/image-pushing/README.md#custom-substitutions
   _GIT_TAG: '12345'  # e.g., vYYYYMMDD-hash, vYYYYMMDD-tag, or vYYYYMMDD-tag-n-ghash
   _PULL_BASE_REF: 'master'  # e.g., master or release-0.2 for a PR merge, or v0.2 for a tag
+  # COSI substitutions:
+  _IMAGE: objectstorage-controller
+  _PLATFORMS: linux/amd64,linux/arm64 # add more platforms here if desired
 steps:
-  # based on simple build example
-  # https://github.com/kubernetes/test-infra/blob/master/config/jobs/image-pushing/README.md
-  - name: gcr.io/cloud-builders/docker
-    # entrypoint: # docker by default
+  # based on k8s infra build example and modified to use docker buildx
+  # buildx refs: https://github.com/docker/buildx/blob/master/docs/reference/buildx.md
+  - id: set-up-multi-arch-builder-as-default
+    name: gcr.io/cloud-builders/docker
+    args: ["buildx", "create", "--use", "--name", "multi-arch", "--platform=${_PLATFORMS}"]
+  - id: bootstrap-multi-arch-builder
+    name: gcr.io/cloud-builders/docker
+    args: ["buildx", "inspect", "--bootstrap"]
+  - id: do-multi-arch-build
+    name: gcr.io/cloud-builders/docker
     args:
       - buildx
       - build
-      - --platform=linux/amd64,linux/arm64
-      - --tag=gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_GIT_TAG}
+      - --platform=${_PLATFORMS}
+      - --tag=gcr.io/k8s-staging-sig-storage/${_IMAGE}:${_GIT_TAG}
       # using _PULL_BASE_REF as a tag will often just build and overwrite the same 'master' tag,
       # BUT! if the commit has a git tag, it will build that tag instead. this mechanism allows
       # creating the semver-tagged images that will be auto-promoted to release
-      - --tag=gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_PULL_BASE_REF}
-      - --tag=gcr.io/k8s-staging-sig-storage/objectstorage-controller:latest
+      - --tag=gcr.io/k8s-staging-sig-storage/${_IMAGE}:${_PULL_BASE_REF}
+      - --tag=gcr.io/k8s-staging-sig-storage/${_IMAGE}:latest
       - .
 images:
-  - gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_GIT_TAG}
-  - gcr.io/k8s-staging-sig-storage/objectstorage-controller:${_PULL_BASE_REF}
-  - gcr.io/k8s-staging-sig-storage/objectstorage-controller:latest
+  - gcr.io/k8s-staging-sig-storage/${_IMAGE}:${_GIT_TAG}
+  - gcr.io/k8s-staging-sig-storage/${_IMAGE}:${_PULL_BASE_REF}
+  - gcr.io/k8s-staging-sig-storage/${_IMAGE}:latest
