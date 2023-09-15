@@ -1,6 +1,6 @@
 # K8s infra build example: https://github.com/kubernetes/test-infra/blob/master/config/jobs/image-pushing/README.md
 # GCloud build docs: https://cloud.google.com/cloud-build/docs/build-config
-# Builds go to https://console.cloud.google.com/gcr/images/k8s-staging-test-infra/global/
+# Builds go to https://console.cloud.google.com/gcr/images/k8s-staging-sig-storage/GLOBAL
 # Build logs in https://testgrid.k8s.io/sig-storage-image-build
 timeout: 3000s
 options:
