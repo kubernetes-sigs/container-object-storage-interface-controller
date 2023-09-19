@@ -13,9 +13,6 @@ DOCKER ?= docker
 ## Platform for 'build'
 PLATFORM ?= linux/$(GOARCH)
 
-## Platform list for multi-arch 'buildx' build
-BUILDX_PLATFORMS ?= linux/amd64,linux/arm64
-
 ## Image tag for all builds
 IMAGE_TAG ?= cosi-controller:latest
 
@@ -25,8 +22,7 @@ IMAGE_TAG ?= cosi-controller:latest
 .PHONY: build
 ## Build local image for development, defaulting linux/<hostarch>
 build:
-	# $(DOCKER) build --platform $(PLATFORM) --tag $(IMAGE_TAG) .
-	true # return true temporarily to allow prow to succeed
+	$(DOCKER) build --platform $(PLATFORM) --tag $(IMAGE_TAG) .
 
 .PHONY: test
 ## Test packages
