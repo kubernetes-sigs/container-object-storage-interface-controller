@@ -14,6 +14,9 @@ updates:
         patterns:
           - "k8s.io*"
           - "sigs.k8s.io*"
+        exclude-patterns:
+          # controller-runtime has history of breaking API changes more often than other k8s projects
+          - "sigs.k8s.io/controller-runtime"
       github-dependencies:
         patterns:
           - "github.com*"
