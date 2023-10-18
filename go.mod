@@ -2,7 +2,7 @@ module sigs.k8s.io/container-object-storage-interface-controller
 
 go 1.18
 
-replace sigs.k8s.io/container-object-storage-interface-api => github.com/shanduur/container-object-storage-interface-api v0.0.0-20231018124508-45d4532cbbfc
+replace sigs.k8s.io/container-object-storage-interface-api => github.com/shanduur/container-object-storage-interface-api v0.0.0-20231018134926-df1d34a6d9e9
 
 require (
 	github.com/spf13/cobra v1.4.0
