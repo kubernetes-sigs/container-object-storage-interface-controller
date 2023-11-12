@@ -31,7 +31,7 @@ spec:
       serviceAccountName: objectstorage-controller-sa
       containers:
         - name: objectstorage-controller
-          image: gcr.io/k8s-staging-sig-storage/objectstorage-controller:v20221027-v0.1.1-8-g300019f
+          image: gcr.io/k8s-staging-sig-storage/objectstorage-controller:v20231102-v0.1.2-alpha1-8-g7e7b773
           imagePullPolicy: Always
           args:
           - "--v=5"
