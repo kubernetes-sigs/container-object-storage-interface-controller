@@ -10,13 +10,12 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned"
 	objectstoragev1alpha1 "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/typed/objectstorage/v1alpha1"
-
+	"sigs.k8s.io/container-object-storage-interface-api/controller/events"
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // BucketClaimListener is a resource handler for bucket requests objects
@@ -43,7 +42,7 @@ func (b *BucketClaimListener) Add(ctx context.Context, bucketClaim *v1alpha1.Buc
 	if err != nil {
 		switch err {
 		case util.ErrInvalidBucketClass:
-			klog.V(3).ErrorS(util.ErrInvalidBucketClass,
+			klog.V(3).ErrorS(err,
 				"bucketClaim", bucketClaim.ObjectMeta.Name,
 				"ns", bucketClaim.ObjectMeta.Namespace,
 				"bucketClassName", bucketClaim.Spec.BucketClassName)
@@ -108,17 +107,11 @@ func (b *BucketClaimListener) Delete(ctx context.Context, bucketClaim *v1alpha1.
 
 // provisionBucketClaimOperation attempts to provision a bucket for a given bucketClaim.
 //
-// Recorded events
-//
-//	InvalidBucket - Bucket provided in the BucketClaim does not exist
-//	InvalidBucketClass - BucketClass provided in the BucketClaim does not exist
-//
 // Return values
-//
-//	nil - BucketClaim successfully processed
-//	ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
-//	ErrBucketAlreadyExists - BucketClaim already processed
-//	non-nil err - Internal error                                [requeue'd with exponential backoff]
+//   - nil - BucketClaim successfully processed
+//   - ErrInvalidBucketClass - BucketClass does not exist          [requeue'd with exponential backoff]
+//   - ErrBucketAlreadyExists - BucketClaim already processed
+//   - non-nil err - Internal error                                [requeue'd with exponential backoff]
 func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context, inputBucketClaim *v1alpha1.BucketClaim) error {
 	bucketClaim := inputBucketClaim.DeepCopy()
 	if bucketClaim.Status.BucketReady {
@@ -132,7 +125,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketName = bucketClaim.Spec.ExistingBucketName
 		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, "InvalidBucket", "Bucket provided in the BucketClaim does not exist")
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.ProvisioningFailed, "Bucket provided in the BucketClaim does not exist")
 			return err
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
@@ -167,11 +160,11 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 
 		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, "InvalidBucketClass", "BucketClass provided in the BucketClaim does not exist")
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.ProvisioningFailed, "BucketClass provided in the BucketClaim does not exist")
 			return util.ErrInvalidBucketClass
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
-			return util.ErrInvalidBucketClass
+			return err
 		}
 
 		bucketName = bucketClassName + string(bucketClaim.ObjectMeta.UID)
