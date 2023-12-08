@@ -2,6 +2,7 @@ package bucketclaim
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -125,7 +126,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketName = bucketClaim.Spec.ExistingBucketName
 		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.ProvisioningFailed, "Bucket provided in the BucketClaim does not exist")
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "Bucket %q provided in the BucketClaim does not exist.", bucketName)
 			return err
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
@@ -160,7 +161,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 
 		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.ProvisioningFailed, "BucketClass provided in the BucketClaim does not exist")
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "BucketClass %q provided in the BucketClaim does not exist.", bucketClassName)
 			return util.ErrInvalidBucketClass
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
@@ -258,9 +259,9 @@ func (b *BucketClaimListener) bucketClaims(namespace string) objectstoragev1alph
 }
 
 // recordEvent during the processing of the objects
-func (b *BucketClaimListener) recordEvent(subject runtime.Object, eventtype, reason, message string) {
+func (b *BucketClaimListener) recordEvent(subject runtime.Object, eventtype, reason, message string, args ...any) {
 	if b.eventRecorder == nil {
 		return
 	}
-	b.eventRecorder.Event(subject, eventtype, reason, message)
+	b.eventRecorder.Event(subject, eventtype, reason, fmt.Sprintf(message, args...))
 }
