@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 
@@ -77,6 +78,28 @@ func TestAddWithMultipleBR(t *testing.T) {
 // Test add idempotency
 func TestAddBRIdempotency(t *testing.T) {
 	runCreateBucketIdempotency(t, "addWithMultipleBR")
+}
+
+// Test recording events
+func TestRecordEvents(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name          string
+		expectedEvent struct {
+			subject runtime.Object
+			reason  string
+			message string
+		}
+	}{} {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// TODO: actual test
+		})
+	}
 }
 
 func runCreateBucket(t *testing.T, name string) {
