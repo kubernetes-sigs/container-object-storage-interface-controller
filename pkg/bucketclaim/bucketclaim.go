@@ -126,7 +126,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketName = bucketClaim.Spec.ExistingBucketName
 		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "Bucket %q provided in the BucketClaim does not exist.", bucketName)
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "Bucket %v provided in the BucketClaim does not exist.", bucketName)
 			return err
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
@@ -161,7 +161,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 
 		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "BucketClass %q provided in the BucketClaim does not exist.", bucketClassName)
+			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, "BucketClass %v provided in the BucketClaim does not exist.", bucketClassName)
 			return util.ErrInvalidBucketClass
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)

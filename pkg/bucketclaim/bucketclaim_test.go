@@ -2,16 +2,17 @@ package bucketclaim
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/record"
 
 	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
-
+	"sigs.k8s.io/container-object-storage-interface-api/controller/events"
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
@@ -84,20 +85,50 @@ func TestAddBRIdempotency(t *testing.T) {
 func TestRecordEvents(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.TODO()
+
 	for _, tc := range []struct {
 		name          string
-		expectedEvent struct {
-			subject runtime.Object
-			reason  string
-			message string
-		}
-	}{} {
+		expectedEvent string
+		eventTrigger  func(context.Context, *BucketClaimListener)
+	}{
+		{
+			name: "",
+			expectedEvent: newEvent(
+				v1.EventTypeWarning,
+				events.FailedCreateBucket,
+				""),
+			eventTrigger: func(ctx context.Context, bcl *BucketClaimListener) {
+				panic("unimplemented")
+			},
+		},
+		{
+			name: "",
+			expectedEvent: newEvent(
+				v1.EventTypeWarning,
+				events.FailedCreateBucket,
+				""),
+			eventTrigger: func(ctx context.Context, bcl *BucketClaimListener) {
+				panic("unimplemented")
+			},
+		},
+	} {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// TODO: actual test
+			recorder := record.NewFakeRecorder(1)
+
+			bcl := &BucketClaimListener{}
+			bcl.InitializeEventRecorder(recorder)
+
+			tc.eventTrigger(ctx, bcl)
+
+			event := <-recorder.Events
+			if event != tc.expectedEvent {
+				t.Errorf("Expected %s \n got %s", tc.expectedEvent, event)
+			}
 		})
 	}
 }
@@ -254,4 +285,8 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 	if len(bucketList.Items) != 1 {
 		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
 	}
+}
+
+func newEvent(eventType, reason, message string) string {
+	return fmt.Sprintf("%s %s %s", eventType, reason, message)
 }
