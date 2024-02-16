@@ -310,7 +310,7 @@ func TestRecordEvents(t *testing.T) {
 			case event, ok := <-eventRecorder.Events:
 				if ok {
 					if event != tc.expectedEvent {
-						t.Errorf("Expected %s \n got %s", tc.expectedEvent, event)
+						t.Errorf("expected %s got %s", tc.expectedEvent, event)
 					}
 				} else {
 					t.Error("channel closed, no event")
