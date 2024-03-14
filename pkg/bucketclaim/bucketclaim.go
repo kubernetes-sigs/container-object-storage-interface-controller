@@ -84,7 +84,7 @@ func (b *BucketClaimListener) Update(ctx context.Context, old, new *v1alpha1.Buc
 				klog.V(3).ErrorS(err, "Error deleting bucket",
 					"bucket", bucketName,
 					"bucketClaim", bucketClaim.ObjectMeta.Name)
-				return err
+				return b.recordError(bucketClaim, v1.EventTypeWarning, events.FailedDeleteBucket, err)
 			}
 
 			klog.V(5).Infof("Successfully deleted bucket: %s from bucketClaim: %s", bucketName, bucketClaim.ObjectMeta.Name)
@@ -126,11 +126,10 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 		bucketName = bucketClaim.Spec.ExistingBucketName
 		bucket, err := b.buckets().Get(ctx, bucketName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err.Error())
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucket with ExistingBucketName error", "name", bucketClaim.Spec.ExistingBucketName)
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		}
 
 		bucket.Spec.BucketClaim = &v1.ObjectReference{
@@ -148,7 +147,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 			klog.V(3).ErrorS(err, "Error updating existing bucket",
 				"bucket", bucket.ObjectMeta.Name,
 				"bucketClaim", bucketClaim.ObjectMeta.Name)
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		}
 
 		bucketClaim.Status.BucketName = bucketName
@@ -156,16 +155,15 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	} else {
 		bucketClassName := bucketClaim.Spec.BucketClassName
 		if bucketClassName == "" {
-			return util.ErrInvalidBucketClass
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, util.ErrInvalidBucketClass)
 		}
 
 		bucketClass, err := b.bucketClasses().Get(ctx, bucketClassName, metav1.GetOptions{})
 		if kubeerrors.IsNotFound(err) {
-			b.recordEvent(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err.Error())
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		} else if err != nil {
 			klog.V(3).ErrorS(err, "Get Bucketclass Error", "name", bucketClassName)
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		}
 
 		bucketName = bucketClassName + string(bucketClaim.ObjectMeta.UID)
@@ -194,7 +192,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 			klog.V(3).ErrorS(err, "Error creationg bucket",
 				"bucket", bucketName,
 				"bucketClaim", bucketClaim.ObjectMeta.Name)
-			return err
+			return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 		}
 
 		bucketClaim.Status.BucketName = bucketName
@@ -206,7 +204,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	bucketClaim, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).UpdateStatus(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		klog.V(3).ErrorS(err, "Failed to update status of BucketClaim", "name", bucketClaim.ObjectMeta.Name)
-		return err
+		return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 	}
 
 	// Add the finalizers so that bucketClaim is deleted
@@ -215,7 +213,7 @@ func (b *BucketClaimListener) provisionBucketClaimOperation(ctx context.Context,
 	_, err = b.bucketClaims(bucketClaim.ObjectMeta.Namespace).Update(ctx, bucketClaim, metav1.UpdateOptions{})
 	if err != nil {
 		klog.V(3).ErrorS(err, "Failed to add finalizer BucketClaim", "name", bucketClaim.ObjectMeta.Name)
-		return err
+		return b.recordError(inputBucketClaim, v1.EventTypeWarning, events.FailedCreateBucket, err)
 	}
 
 	klog.V(3).Infof("Finished creating Bucket %v", bucketName)
@@ -256,6 +254,16 @@ func (b *BucketClaimListener) bucketClaims(namespace string) objectstoragev1alph
 		return b.bucketClient.ObjectstorageV1alpha1().BucketClaims(namespace)
 	}
 	panic("uninitialized listener")
+}
+
+// recordError during the processing of the objects
+func (b *BucketClaimListener) recordError(subject runtime.Object, eventtype, reason string, err error) error {
+	if b.eventRecorder == nil {
+		return err
+	}
+	b.eventRecorder.Event(subject, eventtype, reason, err.Error())
+
+	return err
 }
 
 // recordEvent during the processing of the objects

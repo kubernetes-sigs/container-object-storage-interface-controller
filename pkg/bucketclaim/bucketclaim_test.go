@@ -69,20 +69,20 @@ var bucketClaim2 = types.BucketClaim{
 
 // Test basic add functionality
 func TestAddBR(t *testing.T) {
-	runCreateBucket(t, "add")
+	runCreateBucket(t)
 }
 
 // Test add with multipleBRs
 func TestAddWithMultipleBR(t *testing.T) {
-	runCreateBucketWithMultipleBR(t, "addWithMultipleBR")
+	runCreateBucketWithMultipleBR(t)
 }
 
 // Test add idempotency
 func TestAddBRIdempotency(t *testing.T) {
-	runCreateBucketIdempotency(t, "addWithMultipleBR")
+	runCreateBucketIdempotency(t)
 }
 
-func runCreateBucket(t *testing.T, name string) {
+func runCreateBucket(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -127,7 +127,7 @@ func runCreateBucket(t *testing.T, name string) {
 	}
 }
 
-func runCreateBucketWithMultipleBR(t *testing.T, name string) {
+func runCreateBucketWithMultipleBR(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -183,7 +183,7 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 	}
 }
 
-func runCreateBucketIdempotency(t *testing.T, name string) {
+func runCreateBucketIdempotency(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
