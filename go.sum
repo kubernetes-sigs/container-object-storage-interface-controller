@@ -703,8 +703,8 @@ k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9/go.mod h1:jPW/WVKK9YHAvNhRxK0md/
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sigs.k8s.io/container-object-storage-interface-api v0.0.0-20220806044417-5d7517114883 h1:CtqK7l2m9Atw8L5daJdsXvVgxxvQkRBbJbUz7NiadD8=
-sigs.k8s.io/container-object-storage-interface-api v0.0.0-20220806044417-5d7517114883/go.mod h1:YiB+i/UGkzqgODDhRG3u7jkbWkQcoUeLEJ7hwOT/2Qk=
+sigs.k8s.io/container-object-storage-interface-api v0.1.1-0.20240208184109-05444273ee49 h1:Ax4j3ThWolmk6yH6jvL3Yf0Fzxe0ZfVuDlSLNILU3GA=
+sigs.k8s.io/container-object-storage-interface-api v0.1.1-0.20240208184109-05444273ee49/go.mod h1:YiB+i/UGkzqgODDhRG3u7jkbWkQcoUeLEJ7hwOT/2Qk=
 sigs.k8s.io/controller-runtime v0.12.3 h1:FCM8xeY/FI8hoAfh/V4XbbYMY20gElh9yh+A98usMio=
 sigs.k8s.io/controller-runtime v0.12.3/go.mod h1:qKsk4WE6zW2Hfj0G4v10EnNB2jMG1C+NTb8h+DwCoU0=
 sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 h1:kDi4JBNAsJWfz1aEXhO8Jg87JJaPNLh5tIzYHgStQ9Y=

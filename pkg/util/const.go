@@ -10,7 +10,7 @@ const (
 
 var (
 	// Error codes that the central controller will return
-	ErrBucketAlreadyExists = errors.New("A bucket already existing that matches the bucket claim")
-	ErrInvalidBucketClass  = errors.New("Cannot find bucket class with the name specified in the bucket claim")
-	ErrNotImplemented      = errors.New("Operation Not Implemented")
+	ErrBucketAlreadyExists = errors.New("a bucket already exists that matches the bucket claim")
+	ErrInvalidBucketClass  = errors.New("cannot find bucket class with the name specified in the bucket claim")
+	ErrNotImplemented      = errors.New("operation not implemented")
 )

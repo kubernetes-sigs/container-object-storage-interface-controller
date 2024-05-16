@@ -2,14 +2,18 @@ package bucketclaim
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	v1 "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
+	fakekubeclientset "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
 	types "sigs.k8s.io/container-object-storage-interface-api/apis/objectstorage/v1alpha1"
-	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
-
+	fakebucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
+	"sigs.k8s.io/container-object-storage-interface-api/controller/events"
 	"sigs.k8s.io/container-object-storage-interface-controller/pkg/util"
 )
 
@@ -65,29 +69,31 @@ var bucketClaim2 = types.BucketClaim{
 
 // Test basic add functionality
 func TestAddBR(t *testing.T) {
-	runCreateBucket(t, "add")
+	runCreateBucket(t)
 }
 
 // Test add with multipleBRs
 func TestAddWithMultipleBR(t *testing.T) {
-	runCreateBucketWithMultipleBR(t, "addWithMultipleBR")
+	runCreateBucketWithMultipleBR(t)
 }
 
 // Test add idempotency
 func TestAddBRIdempotency(t *testing.T) {
-	runCreateBucketIdempotency(t, "addWithMultipleBR")
+	runCreateBucketIdempotency(t)
 }
 
-func runCreateBucket(t *testing.T, name string) {
+func runCreateBucket(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client := bucketclientset.NewSimpleClientset()
-	kubeClient := fake.NewSimpleClientset()
+	client := fakebucketclientset.NewSimpleClientset()
+	kubeClient := fakekubeclientset.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
@@ -121,16 +127,18 @@ func runCreateBucket(t *testing.T, name string) {
 	}
 }
 
-func runCreateBucketWithMultipleBR(t *testing.T, name string) {
+func runCreateBucketWithMultipleBR(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client := bucketclientset.NewSimpleClientset()
-	kubeClient := fake.NewSimpleClientset()
+	client := fakebucketclientset.NewSimpleClientset()
+	kubeClient := fakekubeclientset.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
@@ -175,16 +183,18 @@ func runCreateBucketWithMultipleBR(t *testing.T, name string) {
 	}
 }
 
-func runCreateBucketIdempotency(t *testing.T, name string) {
+func runCreateBucketIdempotency(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client := bucketclientset.NewSimpleClientset()
-	kubeClient := fake.NewSimpleClientset()
+	client := fakebucketclientset.NewSimpleClientset()
+	kubeClient := fakekubeclientset.NewSimpleClientset()
+	eventRecorder := record.NewFakeRecorder(3)
 
 	listener := NewBucketClaimListener()
 	listener.InitializeKubeClient(kubeClient)
 	listener.InitializeBucketClient(client)
+	listener.InitializeEventRecorder(eventRecorder)
 
 	bucketclass, err := util.CreateBucketClass(ctx, client, &goldClass)
 	if err != nil {
@@ -224,4 +234,94 @@ func runCreateBucketIdempotency(t *testing.T, name string) {
 	if len(bucketList.Items) != 1 {
 		t.Fatalf("Expecting a single Bucket created but found %v", len(bucketList.Items))
 	}
+}
+
+// Test recording events
+func TestRecordEvents(t *testing.T) {
+	t.Parallel()
+
+	defaultBucketClaim := &v1alpha1.BucketClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-bucketClaim",
+			Namespace: "test-ns",
+		},
+		Spec: v1alpha1.BucketClaimSpec{
+			BucketClassName: "test-bucketClass",
+		},
+	}
+
+	for _, tc := range []struct {
+		name          string
+		expectedEvent string
+		eventTrigger  func(*testing.T, *BucketClaimListener)
+	}{
+		{
+			name: "ExistingBucketNotFound",
+			expectedEvent: newEvent(
+				v1.EventTypeWarning,
+				events.FailedCreateBucket,
+				"buckets.objectstorage.k8s.io \"existing-bucket\" not found"),
+			eventTrigger: func(t *testing.T, bcl *BucketClaimListener) {
+				ctx := context.TODO()
+
+				bucketClaim := defaultBucketClaim.DeepCopy()
+				bucketClaim.Spec.ExistingBucketName = "existing-bucket"
+
+				err := bcl.Add(ctx, bucketClaim)
+				if !kubeerrors.IsNotFound(err) {
+					t.Errorf("expected Not Found error got %v", err)
+				}
+			},
+		},
+		{
+			name: "BucketClassNotFound",
+			expectedEvent: newEvent(
+				v1.EventTypeWarning,
+				events.FailedCreateBucket,
+				"bucketclasses.objectstorage.k8s.io \"test-bucketClass\" not found"),
+			eventTrigger: func(t *testing.T, listener *BucketClaimListener) {
+				ctx := context.TODO()
+				bucketClaim := defaultBucketClaim.DeepCopy()
+
+				err := listener.Add(ctx, bucketClaim)
+				if !kubeerrors.IsNotFound(err) {
+					t.Errorf("expected Not Found error got %v", err)
+				}
+			},
+		},
+	} {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := fakebucketclientset.NewSimpleClientset()
+			kubeClient := fakekubeclientset.NewSimpleClientset()
+			eventRecorder := record.NewFakeRecorder(1)
+
+			listener := NewBucketClaimListener()
+			listener.InitializeKubeClient(kubeClient)
+			listener.InitializeBucketClient(client)
+			listener.InitializeEventRecorder(eventRecorder)
+
+			tc.eventTrigger(t, listener)
+
+			select {
+			case event, ok := <-eventRecorder.Events:
+				if ok {
+					if event != tc.expectedEvent {
+						t.Errorf("expected %s got %s", tc.expectedEvent, event)
+					}
+				} else {
+					t.Error("channel closed, no event")
+				}
+			default:
+				t.Errorf("no event after trigger")
+			}
+		})
+	}
+}
+
+func newEvent(eventType, reason, message string) string {
+	return fmt.Sprintf("%s %s %s", eventType, reason, message)
 }
