@@ -1,3 +1,6 @@
+# MOVED: **This repo has been moved to https://github.com/kubernetes-sigs/container-object-storage-interface : see `controller` directory**
+
+
 # Container Object Storage Controller
 
 Container Object Storage Interface (COSI) controller is responsible to manage lifecycle of COSI objects.
